@@ -14,7 +14,7 @@ A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, se
 
 **English** · [Português](#português)
 
-<img src="docs/images/in-game.png" width="720" alt="Two players in Kino der Toten, with the co-op indicator in the corner">
+<img src="docs/images/four-players.jpg" width="860" alt="Four players in the same lobby, one browser each: the host and three friends, with names, status and ping">
 
 </div>
 
@@ -31,6 +31,8 @@ A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, se
 - **PlayStation and Xbox controllers** with adjustable aim speed.
 - **English and Portuguese**, picked from your browser's language.
 - **Stable**: fixes the crash where one player pressing Escape or T (chat) took down the other players' games.
+
+<p align="center"><img src="docs/images/in-game.png" width="640" alt="Playing Kino der Toten in co-op, with the players indicator in the corner"><br><sub>In game, the card folds into a small indicator: one dot per player, and your ping</sub></p>
 
 <table>
 <tr>
