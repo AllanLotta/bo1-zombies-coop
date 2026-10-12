@@ -1,0 +1,22 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // The deployed worker keeps this name: it is part of the default relay address in the extension.
+  "name": "bo1z-coop-4p-relay",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-08",
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOM_RELAY", "class_name": "RoomRelay" },
+      { "name": "USAGE", "class_name": "UsageCounter" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RoomRelay"] },
+    { "tag": "v2", "new_sqlite_classes": ["UsageCounter"] }
+  ],
+  "observability": { "enabled": true },
+  "vars": {
+    // Pages allowed to open rooms (requests without an Origin header, such as tests, are accepted too).
+    "ALLOWED_ORIGINS": "https://vel.gg"
+  }
+}
