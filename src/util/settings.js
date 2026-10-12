@@ -1,6 +1,6 @@
 // Per-browser preferences in localStorage. Every access is guarded: storage can be unavailable (private windows,
 // blocked site data) and the extension must keep working with defaults.
-import { createGuestId, GUEST_ID_PATTERN } from "../../shared/protocol.js";
+import { createGuestId, GUEST_ID_PATTERN } from "../../relay/src/protocol.js";
 
 const PREFIX = "bo1coop.";
 

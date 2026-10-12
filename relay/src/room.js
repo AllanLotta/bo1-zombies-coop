@@ -13,7 +13,7 @@ import {
   encodeSeatPackets,
   isPeerMessage,
   parseControl,
-} from "../../shared/protocol.js";
+} from "./protocol.js";
 import { json } from "./http.js";
 import { UsageTally } from "./usage.js";
 

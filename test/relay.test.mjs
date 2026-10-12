@@ -2,7 +2,7 @@
 // seats kept on reload and reused when freed.
 //   npm run relay:dev, then: node test/relay.test.mjs [relay URL]
 import assert from "node:assert/strict";
-import { encodePackets, decodePackets, encodeSeatPackets, decodeSeatPackets, relaySocketUrl, createRoomCode, createGuestId } from "../shared/protocol.js";
+import { encodePackets, decodePackets, encodeSeatPackets, decodeSeatPackets, relaySocketUrl, createRoomCode, createGuestId } from "../relay/src/protocol.js";
 
 const RELAY = process.argv[2] ?? "http://127.0.0.1:8787";
 const room = createRoomCode();

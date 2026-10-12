@@ -91,26 +91,41 @@ Tips:
 | "You and the host have different versions" | Both reload the page (the engine is cached per browser). |
 | "This game is full" | A room holds 4 players. Wait for a free seat or host another room. |
 | Stuck on "Next in line" | Players connect one at a time; it moves on within a minute. If it does not, reload. |
-| Co-op stops working for everyone at the same time | The relay's free daily allowance may be used up; it resets at midnight UTC. See [Run your own relay](#run-your-own-relay). |
+| "This relay used up today's free allowance" | The shared relay is out for today (it comes back at midnight UTC). [Create your own relay](#run-your-own-relay-recommended-for-your-group): 5 minutes, free. |
 
 Works in Chrome. Other Chromium browsers (Edge, Brave, Opera) load the same extension but are not tested.
 
-## Run your own relay
+## Run your own relay (recommended for your group)
 
-Players connect through a small relay on Cloudflare, which only forwards game packets. The default relay runs on
-Cloudflare's free plan, whose daily allowance is shared by everyone using it. Your own relay is free too, takes about
-five minutes, and is used only by the people you invite:
+Players connect through a small relay on Cloudflare that only forwards game packets. The default relay is shared by
+**everyone** who uses the extension, on Cloudflare's free plan: about **4 hours of 2-player games, or 1½ hours of
+4-player games, per day for all of them together**. When that runs out, co-op stops for everybody until midnight UTC,
+and the card says so.
+
+Your own relay is free too, takes about 5 minutes, and its allowance is only for the people you invite.
+
+**With the button (no terminal):**
+
+1. Create a free account at [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up) and confirm your email.
+2. Click [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/AllanLotta/bo1-zombies-coop/tree/main/relay), sign in, allow it to
+   create a copy of the relay in your GitHub account, and click **Deploy**. If Cloudflare asks you to pick a
+   `workers.dev` subdomain, any name works.
+3. Copy your relay's address when it is ready: `https://bo1-zombies-coop-relay.<your-name>.workers.dev`.
+4. On the Co-op card: **Settings → Change relay**, paste it, **Save**.
+
+Your invite links carry your relay, so friends switch to it with one click (**Use this relay** on their card).
+
+**With the terminal** (needs [Node.js](https://nodejs.org) 22+):
 
 ```sh
 git clone https://github.com/AllanLotta/bo1-zombies-coop
-cd bo1-zombies-coop
+cd bo1-zombies-coop/relay
 npm install
-npx wrangler login          # free Cloudflare account, email confirmed
-npm run relay:deploy        # prints https://bo1z-coop-4p-relay.<your-name>.workers.dev
+npx wrangler login     # opens the browser: click Allow
+npx wrangler deploy    # prints your relay's address
 ```
 
-Then, on the Co-op card: **Settings → Change relay**, paste that address, **Save**. Your invite links carry the relay,
-so friends switch to it with one click.
+Then step 4 above.
 
 ## How it works
 
@@ -136,8 +151,7 @@ src/
   ui/             the card, its view model, styles and texts (EN/PT)
   input/          controller support
   game/ util/     vel.gg page helpers, settings, relay selection
-shared/           wire protocol used by both the extension and the relay
-relay/            Cloudflare Worker + Durable Objects
+relay/            Cloudflare Worker + Durable Objects, and the wire protocol (deploys on its own)
 test/             relay, engine patch, end-to-end and UI preview tests
 scripts/          build, packaging, icons and screenshots (README, install guide)
 docs/             the install page (GitHub Pages) and its images
@@ -226,4 +240,22 @@ depois do início assiste até a próxima rodada, como no jogo original). Nasceu
 | "Versões diferentes do jogo" | Os dois recarregam a página. |
 | "Esta partida está cheia" | A sala comporta 4 jogadores. |
 | Parado em "Na fila para entrar" | Os jogadores entram um de cada vez; em até um minuto anda. Se não, recarregue. |
-| O co-op parou para todo mundo ao mesmo tempo | A cota grátis diária do relay pode ter acabado; renova à meia-noite UTC. Dá para usar um relay próprio (veja acima, em inglês). |
+| "Este relay usou toda a cota grátis de hoje" | O relay compartilhado acabou por hoje (volta às 21h de Brasília). [Crie o seu relay](#relay-próprio-recomendado-para-o-seu-grupo): 5 minutos, grátis. |
+
+### Relay próprio (recomendado para o seu grupo)
+
+O relay padrão é dividido por **todo mundo** que usa a extensão, no plano grátis da Cloudflare: umas **4 horas de jogo
+a 2, ou 1 hora e meia a 4, por dia, para todos juntos**. Quando acaba, o co-op para até as 21h (meia-noite UTC) e o
+cartão avisa. O seu próprio relay também é grátis, leva uns 5 minutos e a cota dele é só do seu grupo.
+
+**Pelo botão (sem terminal):**
+
+1. Crie uma conta grátis em [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up) e confirme o e-mail.
+2. Clique em [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/AllanLotta/bo1-zombies-coop/tree/main/relay), entre na conta,
+   autorize a criação de uma cópia do relay no seu GitHub e clique em **Deploy**. Se a Cloudflare pedir um subdomínio
+   `workers.dev`, qualquer nome serve.
+3. Copie o endereço do seu relay quando ficar pronto: `https://bo1-zombies-coop-relay.<seu-nome>.workers.dev`.
+4. No cartão Co-op: **Configurações → Trocar relay**, cole o endereço e clique em **Salvar**.
+
+Os seus links de convite já levam o relay junto: os amigos só clicam em **Usar este relay** no cartão deles.
+Pelo terminal: veja os comandos na seção em inglês, acima.

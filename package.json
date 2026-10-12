@@ -1,6 +1,6 @@
 {
   "name": "bo1-zombies-coop",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": true,
   "type": "module",
   "description": "Up to 4-player online co-op for Black Ops 1 Zombies in the browser (vel.gg): Chrome extension and Cloudflare relay",
@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "check": "npm run lint && npm run build && node test/patch.test.mjs",
     "relay:dev": "wrangler dev --config relay/wrangler.jsonc --port 8787 --ip 127.0.0.1",
-    "relay:deploy": "wrangler deploy --config relay/wrangler.jsonc",
+    "relay:deploy": "wrangler deploy --config relay/wrangler.jsonc --name bo1z-coop-4p-relay",
     "test:relay": "node test/relay.test.mjs",
     "test:e2e": "node test/e2e.mjs",
     "preview": "node test/ui-preview.mjs",

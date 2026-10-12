@@ -5,7 +5,7 @@
 // Host: one reader per guest seat (what the server sends that guest) and one writer (the shared inbound queue, each
 // packet stamped with its sender's port). Guest: one reader (its client's outgoing queue) and one writer (its client's
 // incoming queue, port 0).
-import { decodePackets, decodeSeatPackets, encodePackets, encodeSeatPackets, MAX_BINARY_BYTES, parseControl, relaySocketUrl } from "../../shared/protocol.js";
+import { decodePackets, decodeSeatPackets, encodePackets, encodeSeatPackets, MAX_BINARY_BYTES, parseControl, relaySocketUrl } from "../../relay/src/protocol.js";
 import { connectionlessCommand, QueueReader, QueueWriter } from "./queues.js";
 
 const POLL_MS = 1;
@@ -97,6 +97,8 @@ function open() {
     post({ type: "socket", state: "closed", code: event.code, reason: event.reason });
     // 4001: another tab took this seat; 4004: the room is full. Retrying would not help either.
     if (event.code === 4001 || event.code === 4004) state.closed = true;
+    // 4005: the relay is out of its daily allowance; check again now and then instead of hammering it.
+    else if (event.code === 4005) setTimeout(open, 60000);
     else retry();
   };
   socket.onerror = () => {};

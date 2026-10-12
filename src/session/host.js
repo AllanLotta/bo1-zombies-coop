@@ -1,7 +1,7 @@
 // The host: runs the real game server. Guests' clients reach it through extra loopback queues that the pump worker
 // fills from the relay; the host also decides who may connect when, keeps everyone's pause in sync and tells guests
 // what the lobby looks like.
-import { MAX_GUESTS } from "../../shared/protocol.js";
+import { MAX_GUESTS } from "../../relay/src/protocol.js";
 import { SLOT } from "../engine/builds.js";
 import { EngineMemory } from "../engine/memory.js";
 import { devmapZone, gameSettings, insertBeforeDevmap, latestView, screen as pageScreen } from "../game/page.js";

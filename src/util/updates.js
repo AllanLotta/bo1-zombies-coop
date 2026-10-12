@@ -4,6 +4,7 @@ import { readSetting, saveSetting } from "./settings.js";
 
 const LATEST = "https://api.github.com/repos/AllanLotta/bo1-zombies-coop/releases/latest";
 export const UPDATE_GUIDE = "https://allanlotta.github.io/bo1-zombies-coop/#update";
+export const RELAY_GUIDE = "https://allanlotta.github.io/bo1-zombies-coop/#relay";
 const CHECK_EVERY_MS = 6 * 3600 * 1000;
 
 const parts = (version) => String(version).replace(/^v/, "").split(".").map((n) => parseInt(n, 10) || 0);

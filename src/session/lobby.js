@@ -1,6 +1,6 @@
 // The lobby every player sees: four rows, host first. The host builds it from what it knows about each guest and
 // broadcasts it; guests show the host's copy, with their own row filled in from their own state.
-import { MAX_GUESTS } from "../../shared/protocol.js";
+import { MAX_GUESTS } from "../../relay/src/protocol.js";
 import { SLOT } from "../engine/builds.js";
 import { currentHorde, currentZone, MAP_SLUGS, screen as pageScreen } from "../game/page.js";
 import { send } from "../net/pump.js";

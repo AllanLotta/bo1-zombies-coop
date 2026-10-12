@@ -69,7 +69,7 @@ const STRINGS = {
     dropped: "Packets dropped",
     relayDefault: "Default relay",
     relayCustom: (h) => `Custom (${h})`,
-    relayNote: "Free Cloudflare plan: a daily allowance shared by everyone on this relay.",
+    relayNote: "Free Cloudflare plan: a few hours of play a day, shared by everyone on this relay. For a group that plays often, create your own (5 minutes, free).",
     changeRelay: "Change relay",
     useDefault: "Use the default relay",
     cancel: "Cancel",
@@ -100,7 +100,9 @@ const STRINGS = {
     notLetIn: "The host did not let us in. Reload both pages and try again.",
     hostLeft: "The host left the game.",
     updateAvailable: (v) => `Version ${v} is out. Updating takes about a minute.`,
-    updateHow: "How to update"
+    updateHow: "How to update",
+    relayOverQuota: (t) => `This relay used up today's free allowance${t ? ` (it comes back at ${t})` : ""}. With your own relay, free and set up in 5 minutes, your group plays now.`,
+    relayGuide: "Create my relay"
   },
   pt: {
     tagline: "at\xE9 4 jogadores",
@@ -169,7 +171,7 @@ const STRINGS = {
     dropped: "Pacotes perdidos",
     relayDefault: "Relay padr\xE3o",
     relayCustom: (h) => `Personalizado (${h})`,
-    relayNote: "Plano gr\xE1tis da Cloudflare: uma cota di\xE1ria dividida por todos que usam este relay.",
+    relayNote: "Plano gr\xE1tis da Cloudflare: algumas horas de jogo por dia, divididas por todos que usam este relay. Para um grupo que joga sempre, crie o seu (5 minutos, gr\xE1tis).",
     changeRelay: "Trocar relay",
     useDefault: "Usar o relay padr\xE3o",
     cancel: "Cancelar",
@@ -200,7 +202,9 @@ const STRINGS = {
     notLetIn: "O host n\xE3o deixou entrar. Recarreguem as duas p\xE1ginas e tentem de novo.",
     hostLeft: "O host saiu da partida.",
     updateAvailable: (v) => `Saiu a vers\xE3o ${v}. Atualizar leva cerca de 1 minuto.`,
-    updateHow: "Como atualizar"
+    updateHow: "Como atualizar",
+    relayOverQuota: (t) => `Este relay usou toda a cota gr\xE1tis de hoje${t ? ` (ela volta \xE0s ${t})` : ""}. Com o seu pr\xF3prio relay, gr\xE1tis e criado em 5 minutos, o seu grupo joga agora.`,
+    relayGuide: "Criar meu relay"
   }
 };
 export const T = STRINGS[LANG];

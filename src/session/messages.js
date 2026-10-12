@@ -1,5 +1,5 @@
 // Control messages between players (everything except game packets), and the host's bookkeeping of its guests.
-import { MAX_GUESTS } from "../../shared/protocol.js";
+import { MAX_GUESTS } from "../../relay/src/protocol.js";
 import { currentHorde, currentZone, MAP_SLUGS } from "../game/page.js";
 import { send } from "../net/pump.js";
 import { followHostMap } from "./guest.js";
@@ -13,6 +13,7 @@ export function onControl(session, message) {
 function onHostMessage(session, message) {
   switch (message.t) {
     case "welcome":
+      session.overQuota = null;
       for (const seat of Array.isArray(message.guests) ? message.guests : []) guestArrived(session, seat);
       break;
     case "peer":
@@ -28,6 +29,7 @@ function onHostMessage(session, message) {
       break;
     case "error":
       session.note(`relay error ${message.code}`);
+      if (message.code === "over_quota") session.overQuota = { resetsAt: message.resetsAt ?? null };
       break;
   }
   session.peer = [...session.guests.values()].some((g) => g.present);
@@ -36,6 +38,7 @@ function onHostMessage(session, message) {
 function onGuestMessage(session, message) {
   switch (message.t) {
     case "welcome":
+      session.overQuota = null;
       session.seat = validSeat(message.seat) ? message.seat : null;
       session.peer = Boolean(message.peer);
       if (session.peer) introduce(session);
@@ -68,6 +71,7 @@ function onGuestMessage(session, message) {
     case "error":
       session.note(`relay error ${message.code}`);
       if (message.code === "room_full") session.fail("full", MAX_GUESTS + 1);
+      if (message.code === "over_quota") session.overQuota = { resetsAt: message.resetsAt ?? null };
       break;
   }
 }

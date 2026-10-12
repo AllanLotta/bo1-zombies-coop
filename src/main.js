@@ -1,5 +1,5 @@
 // Entry point, injected into vel.gg's page before its own scripts run (manifest: run_at document_start, world MAIN).
-import { createRoomCode, normalizeRoomCode } from "../shared/protocol.js";
+import { createRoomCode, normalizeRoomCode } from "../relay/src/protocol.js";
 import { CONNECTION } from "./engine/builds.js";
 import { BASE, go, measureRefreshRate } from "./game/page.js";
 import { AIM_SPEEDS, Gamepad } from "./input/gamepad.js";
@@ -10,13 +10,14 @@ import { hostTick } from "./session/host.js";
 import { onControl } from "./session/messages.js";
 import { createSession } from "./session/session.js";
 import { Card } from "./ui/card.js";
-import { T } from "./ui/strings.js";
+import { LANG, T } from "./ui/strings.js";
 import { view } from "./ui/view.js";
 import { DEFAULT_RELAY, inviteLink, normalizeRelay } from "./util/relay.js";
 import { cleanName, guestIdFor, saveSetting } from "./util/settings.js";
-import { checkForUpdate } from "./util/updates.js";
+import { checkForUpdate, RELAY_GUIDE } from "./util/updates.js";
 
 const TICK_MS = 50;
+const LANG_QUERY = LANG === "pt" ? "?lang=pt#" : "#";
 const USAGE_REFRESH_MS = 600000;
 
 if (!window.__bo1Coop) start();
@@ -109,6 +110,7 @@ function actions(session) {
     startNow: () => (session.startAlone = true),
     rejoin: () => location.reload(),
     openUpdate: () => window.open(session.update?.url, "_blank", "noopener"),
+    openRelayGuide: () => window.open(`${RELAY_GUIDE.replace("#", LANG_QUERY)}`, "_blank", "noopener"),
     goToHost: () => moveToHost(session, "button"),
     settings: () => (session.showSettings = !session.showSettings),
     saveName: (text) => {
@@ -117,6 +119,11 @@ function actions(session) {
       session.sentPhaseAt = 0; // resend our state, which carries the name
     },
     editRelay: () => (session.editRelay = !session.editRelay),
+    // From the over-quota notice: open settings straight at the relay field.
+    editRelayNow: () => {
+      session.showSettings = true;
+      session.editRelay = true;
+    },
     saveRelay: (text) => {
       const url = normalizeRelay(text ?? "");
       if (url) reloadWithRelay(url === DEFAULT_RELAY ? "" : url);

@@ -1,6 +1,6 @@
 // Turns the session into the card's view model: a header chip, a list of blocks, and the compact pill shown while
 // playing. Pure function of the session (plus the page's screen), recomputed every tick.
-import { MAX_GUESTS } from "../../shared/protocol.js";
+import { MAX_GUESTS } from "../../relay/src/protocol.js";
 import { currentHorde, currentSlug, currentZone, MAP_NAMES, MAP_SLUGS, screen as pageScreen } from "../game/page.js";
 import { AIM_SPEEDS } from "../input/gamepad.js";
 import { guestRoster, hostRoster } from "../session/lobby.js";
@@ -19,6 +19,10 @@ export function view(session) {
   const blocks = [];
   if (session.error) blocks.push({ kind: "callout", tone: "bad", text: session.error });
   if (session.notice) blocks.push({ kind: "callout", tone: "info", text: session.notice });
+  if (session.overQuota) {
+    const at = session.overQuota.resetsAt ? new Date(session.overQuota.resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
+    blocks.push({ kind: "callout", tone: "bad", text: T.relayOverQuota(at), buttons: [{ act: "openRelayGuide", label: T.relayGuide, style: "primary" }, { act: "editRelayNow", label: T.changeRelay }] });
+  }
   if (session.update) blocks.push({ kind: "callout", tone: "ok", text: T.updateAvailable(session.update.version), buttons: [{ act: "openUpdate", label: T.updateHow, style: "primary" }] });
   if (!session.mode) return soloView(session, blocks, playing);
 

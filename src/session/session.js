@@ -1,11 +1,11 @@
 // The co-op session: everything the extension knows about this page's game, shared by the engine hooks, the network
 // side and the card. One per page, created at startup and exposed as window.__bo1Coop for debugging.
-import { MAX_GUESTS, normalizeRoomCode } from "../../shared/protocol.js";
+import { MAX_GUESTS, normalizeRoomCode } from "../../relay/src/protocol.js";
 import { T } from "../ui/strings.js";
 import { isLoopback, normalizeRelay, pickRelay } from "../util/relay.js";
 import { cleanName, readSetting } from "../util/settings.js";
 
-export const VERSION = "2.1.0";
+export const VERSION = "2.1.1";
 export const AIM_LEVELS = 10;
 
 export function createSession(search = location.search) {
@@ -65,6 +65,7 @@ export function createSession(search = location.search) {
 
     // card
     update: null, // { version, url } when a newer release is out
+    overQuota: null, // { resetsAt } while the relay is out of its daily allowance
     error: null,
     notice: null,
     editRelay: false,
@@ -87,6 +88,7 @@ export function createSession(search = location.search) {
 
   session.onSocket = ({ state, code }) => {
     session.socket = state;
+    if (state === "closed" && code === 4005) session.overQuota ??= { resetsAt: null };
     if (state !== "open") {
       session.peer = false;
       for (const guest of session.guests.values()) {

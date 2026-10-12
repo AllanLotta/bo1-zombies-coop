@@ -77,6 +77,7 @@
     <div class="cta">
       <a class="btn primary" href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip"><span class="en">Download the extension</span><span class="pt">Baixar a extensão</span> <small>.zip</small></a>
       <a class="btn" href="#install"><span class="en">How to install</span><span class="pt">Como instalar</span></a>
+      <a class="btn" href="#relay"><span class="en">Your own relay</span><span class="pt">Relay próprio</span></a>
     </div>
     <div class="facts en">Free · open source · no account · Chrome on Windows, Mac and Linux</div>
     <div class="facts pt">Grátis · código aberto · sem cadastro · Chrome no Windows, Mac e Linux</div>
@@ -157,9 +158,47 @@
     </div>
   </section>
 
+  <section id="relay">
+    <h2 class="en">Your own relay (recommended for your group)</h2>
+    <h2 class="pt">Relay próprio (recomendado para o seu grupo)</h2>
+    <p class="en">Players connect through a small relay on Cloudflare. The default one is shared by everyone who uses the extension and only lasts a few hours of play a day for all of them together (about 4 hours of 2-player games, 1½ hours of 4-player games). When it runs out, the card says so and co-op stops until midnight UTC. Your own relay is free, takes 5 minutes, and its allowance is only for your group.</p>
+    <p class="pt">Os jogadores se conectam por um pequeno relay na Cloudflare. O padrão é dividido por todo mundo que usa a extensão e só dura algumas horas de jogo por dia para todos juntos (umas 4 horas de jogo a 2, ou 1 hora e meia a 4). Quando acaba, o cartão avisa e o co-op para até as 21h (horário de Brasília). O seu próprio relay é grátis, leva 5 minutos, e a cota dele é só do seu grupo.</p>
+    <div class="steps">
+      <div class="step">
+        <h3 class="en">Create a free Cloudflare account</h3>
+        <h3 class="pt">Crie uma conta grátis na Cloudflare</h3>
+        <p class="en">At <a href="https://dash.cloudflare.com/sign-up">dash.cloudflare.com/sign-up</a>, then confirm your email (Cloudflare doesn't deploy anything before that). No credit card needed.</p>
+        <p class="pt">Em <a href="https://dash.cloudflare.com/sign-up">dash.cloudflare.com/sign-up</a>, e depois confirme o e-mail (a Cloudflare não publica nada antes disso). Não precisa de cartão de crédito.</p>
+      </div>
+      <div class="step">
+        <h3 class="en">Click the button and deploy</h3>
+        <h3 class="pt">Clique no botão e publique</h3>
+        <p><a href="https://deploy.workers.cloudflare.com/?url=https://github.com/AllanLotta/bo1-zombies-coop/tree/main/relay"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare" style="width:auto;border:0;background:none;margin:6px 0"></a></p>
+        <p class="en">Sign in, allow it to create a copy of the relay in your GitHub account (you need a free GitHub account), and click <b>Deploy</b>. If Cloudflare asks you to pick a <code>workers.dev</code> subdomain, any name works. It takes about a minute.</p>
+        <p class="pt">Entre na conta, autorize a criação de uma cópia do relay no seu GitHub (precisa de uma conta grátis no GitHub) e clique em <b>Deploy</b>. Se a Cloudflare pedir um subdomínio <code>workers.dev</code>, qualquer nome serve. Leva mais ou menos um minuto.</p>
+      </div>
+      <div class="step">
+        <h3 class="en">Copy your relay's address</h3>
+        <h3 class="pt">Copie o endereço do seu relay</h3>
+        <p class="en">It looks like <code>https://bo1-zombies-coop-relay.your-name.workers.dev</code> and shows up when the deploy finishes (also under <b>Workers &amp; Pages</b> in the Cloudflare dashboard).</p>
+        <p class="pt">Ele é parecido com <code>https://bo1-zombies-coop-relay.seu-nome.workers.dev</code> e aparece quando a publicação termina (também em <b>Workers &amp; Pages</b>, no painel da Cloudflare).</p>
+      </div>
+      <div class="step">
+        <h3 class="en">Paste it in the Co-op card</h3>
+        <h3 class="pt">Cole no cartão Co-op</h3>
+        <p class="en">On vel.gg: <b>Settings → Change relay</b>, paste the address, <b>Save</b>. Then host as usual: your invite links carry your relay, and your friends click <b>Use this relay</b> on their card.</p>
+        <p class="pt">No vel.gg: <b>Configurações → Trocar relay</b>, cole o endereço e clique em <b>Salvar</b>. Depois é só hospedar normalmente: seus links de convite levam o relay junto, e os amigos clicam em <b>Usar este relay</b> no cartão deles.</p>
+      </div>
+    </div>
+    <details class="en"><summary>Prefer the terminal?</summary><p>With Node.js 22+: <code>git clone https://github.com/AllanLotta/bo1-zombies-coop</code>, then <code>cd bo1-zombies-coop/relay</code>, <code>npm install</code>, <code>npx wrangler login</code> and <code>npx wrangler deploy</code>. It prints your relay's address.</p></details>
+    <details class="pt"><summary>Prefere o terminal?</summary><p>Com Node.js 22+: <code>git clone https://github.com/AllanLotta/bo1-zombies-coop</code>, depois <code>cd bo1-zombies-coop/relay</code>, <code>npm install</code>, <code>npx wrangler login</code> e <code>npx wrangler deploy</code>. Ele mostra o endereço do seu relay.</p></details>
+  </section>
+
   <section id="help">
     <h2 class="en">Something went wrong?</h2>
     <h2 class="pt">Deu algum problema?</h2>
+    <details class="en"><summary>"This relay used up today's free allowance"</summary><p>The shared relay is out for today; it comes back at midnight UTC. To play now, <a href="#relay">create your own relay</a>: 5 minutes, free.</p></details>
+    <details class="pt"><summary>"Este relay usou toda a cota grátis de hoje"</summary><p>O relay compartilhado acabou por hoje; ele volta às 21h (horário de Brasília). Para jogar agora, <a href="#relay">crie o seu relay</a>: 5 minutos, grátis.</p></details>
     <details class="en"><summary>"Manifest file is missing or unreadable"</summary><p>You picked the wrong folder. Pick the one that has <code>manifest.json</code> directly inside (not the folder around it, and not the .zip).</p></details>
     <details class="pt"><summary>"O arquivo de manifesto está ausente ou ilegível"</summary><p>Você escolheu a pasta errada. Escolha a que tem o <code>manifest.json</code> logo dentro (não a pasta de fora, nem o .zip).</p></details>
     <details class="en"><summary>I don't see the Co-op card on vel.gg</summary><p>Check the extension is switched on in <code>chrome://extensions</code>, then reload the vel.gg tab. The card only shows on vel.gg.</p></details>
