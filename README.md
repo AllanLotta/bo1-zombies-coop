@@ -12,6 +12,8 @@ A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, se
 ![Maps](https://img.shields.io/badge/maps-all%2010-5aa8ff)
 ![Browser](https://img.shields.io/badge/browser-Chrome-f4c542)
 
+### [⬇ Download the extension](https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip) · [Install guide with pictures](https://allanlotta.github.io/bo1-zombies-coop/)
+
 **English** · [Português](#português)
 
 <img src="docs/images/four-players.jpg" width="860" alt="Four players in the same lobby, one browser each: the host and three friends, with names, status and ping">
@@ -44,12 +46,22 @@ A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, se
 
 ## Install (2 minutes, every player)
 
-1. Download **`bo1-zombies-coop-*.zip`** from the [latest release](https://github.com/AllanLotta/bo1-zombies-coop/releases/latest) and unzip it.
-2. In Chrome, open `chrome://extensions` and switch on **Developer mode** (top right).
-3. Click **Load unpacked** and pick the unzipped folder (the one with `manifest.json` inside).
-4. Open [vel.gg/bo1z](https://vel.gg/bo1z/). The **Co-op** card appears in the top right corner.
+Step-by-step page with pictures, in English and Portuguese: **[allanlotta.github.io/bo1-zombies-coop](https://allanlotta.github.io/bo1-zombies-coop/)**
 
-Downloaded the whole repository instead? Pick its `extension` folder in step 3.
+1. **[Download the extension](https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip)** and unzip it.
+   You get a folder called `bo1-zombies-coop`: move it somewhere it can stay (Chrome keeps using it).
+2. Paste `chrome://extensions` into Chrome's address bar and switch on **Developer mode**, top right:
+
+   <img src="docs/images/install/en-1.png" width="640" alt="Developer mode switch">
+3. Click **Load unpacked** and pick the `bo1-zombies-coop` folder (the one with `manifest.json` inside):
+
+   <img src="docs/images/install/en-2.png" width="640" alt="Load unpacked button">
+4. Done. Open [vel.gg/bo1z](https://vel.gg/bo1z/): the **Co-op** card appears in the top right corner.
+
+   <img src="docs/images/install/en-3.png" width="640" alt="The installed extension">
+
+Chrome may show a popup about developer-mode extensions when it starts: that's normal, just close it.
+When a new version is out, the Co-op card tells you and links to the [update steps](https://allanlotta.github.io/bo1-zombies-coop/#update).
 
 ## Play
 
@@ -127,7 +139,8 @@ src/
 shared/           wire protocol used by both the extension and the relay
 relay/            Cloudflare Worker + Durable Objects
 test/             relay, engine patch, end-to-end and UI preview tests
-scripts/          build, packaging and icon rendering
+scripts/          build, packaging, icons and screenshots (README, install guide)
+docs/             the install page (GitHub Pages) and its images
 ```
 
 ```sh
@@ -138,7 +151,7 @@ npm run relay:dev          # relay on http://127.0.0.1:8787
 npm run test:relay         # routing test against it
 node test/e2e.mjs 2 kino   # two real browsers playing through the local relay
 npm run preview            # screenshots of every card state (no game loaded)
-npm run package            # dist/bo1-zombies-coop-<version>.zip
+npm run package            # dist/bo1-zombies-coop.zip (same name every release, for the download link)
 ```
 
 Each end-to-end player is a full game engine using several GB of memory: on a 16 GB machine, test with 3 at most.
@@ -177,10 +190,22 @@ Not affiliated with Activision or Treyarch. Call of Duty and Black Ops are trade
 
 ### Instalar (2 minutos, cada jogador)
 
-1. Baixe o **`bo1-zombies-coop-*.zip`** na [última versão](https://github.com/AllanLotta/bo1-zombies-coop/releases/latest) e descompacte.
-2. No Chrome, abra `chrome://extensions` e ligue o **Modo do desenvolvedor** (canto superior direito).
-3. Clique em **Carregar sem compactação** e escolha a pasta descompactada (a que tem o `manifest.json`).
-4. Abra o [vel.gg/bo1z](https://vel.gg/bo1z/). O cartão **Co-op** aparece no canto superior direito.
+Passo a passo com imagens: **[allanlotta.github.io/bo1-zombies-coop](https://allanlotta.github.io/bo1-zombies-coop/?lang=pt)**
+
+1. **[Baixe a extensão](https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip)** e descompacte.
+   Aparece uma pasta `bo1-zombies-coop`: deixe ela num lugar fixo, como Documentos (o Chrome continua usando a pasta).
+2. Cole `chrome://extensions` na barra de endereços do Chrome e ligue o **Modo do desenvolvedor**, no canto superior direito:
+
+   <img src="docs/images/install/pt-1.png" width="640" alt="Modo do desenvolvedor">
+3. Clique em **Carregar sem compactação** e escolha a pasta `bo1-zombies-coop` (a que tem o `manifest.json` dentro):
+
+   <img src="docs/images/install/pt-2.png" width="640" alt="Carregar sem compactação">
+4. Pronto. Abra o [vel.gg/bo1z](https://vel.gg/bo1z/): o cartão **Co-op** aparece no canto superior direito.
+
+   <img src="docs/images/install/pt-3.png" width="640" alt="A extensão instalada">
+
+Ao abrir, o Chrome pode mostrar um aviso sobre extensões em modo de desenvolvedor: é normal, só feche.
+Quando sair versão nova, o cartão avisa e mostra [como atualizar](https://allanlotta.github.io/bo1-zombies-coop/?lang=pt#update).
 
 ### Jogar
 

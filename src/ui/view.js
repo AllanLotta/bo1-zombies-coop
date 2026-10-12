@@ -19,6 +19,7 @@ export function view(session) {
   const blocks = [];
   if (session.error) blocks.push({ kind: "callout", tone: "bad", text: session.error });
   if (session.notice) blocks.push({ kind: "callout", tone: "info", text: session.notice });
+  if (session.update) blocks.push({ kind: "callout", tone: "ok", text: T.updateAvailable(session.update.version), buttons: [{ act: "openUpdate", label: T.updateHow, style: "primary" }] });
   if (!session.mode) return soloView(session, blocks, playing);
 
   const hosting = session.mode === "host";

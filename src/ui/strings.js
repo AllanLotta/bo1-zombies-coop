@@ -98,7 +98,9 @@ const STRINGS = {
     hostPlaying: (m) => `The host is playing ${m}. Reload this page.`,
     connectFailed: "Could not start the connection to the host. Reload both pages.",
     notLetIn: "The host did not let us in. Reload both pages and try again.",
-    hostLeft: "The host left the game."
+    hostLeft: "The host left the game.",
+    updateAvailable: (v) => `Version ${v} is out. Updating takes about a minute.`,
+    updateHow: "How to update"
   },
   pt: {
     tagline: "at\xE9 4 jogadores",
@@ -196,7 +198,9 @@ const STRINGS = {
     hostPlaying: (m) => `O host est\xE1 jogando ${m}. Recarregue esta p\xE1gina.`,
     connectFailed: "N\xE3o deu para iniciar a conex\xE3o com o host. Recarreguem as duas p\xE1ginas.",
     notLetIn: "O host n\xE3o deixou entrar. Recarreguem as duas p\xE1ginas e tentem de novo.",
-    hostLeft: "O host saiu da partida."
+    hostLeft: "O host saiu da partida.",
+    updateAvailable: (v) => `Saiu a vers\xE3o ${v}. Atualizar leva cerca de 1 minuto.`,
+    updateHow: "Como atualizar"
   }
 };
 export const T = STRINGS[LANG];

@@ -2,14 +2,23 @@
   "manifest_version": 3,
   "name": "BO1 Zombies Co-op: 4 players for vel.gg",
   "short_name": "BO1 Zombies Co-op",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Play Black Ops 1 Zombies in the browser (vel.gg) with up to 4 players online: host a game, send the link, play together. Controller support included.",
-  "homepage_url": "https://github.com/AllanLotta/bo1-zombies-coop",
-  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "homepage_url": "https://allanlotta.github.io/bo1-zombies-coop/",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "content_scripts": [
     {
-      "matches": ["https://vel.gg/*"],
-      "js": ["coop.js"],
+      "matches": [
+        "https://vel.gg/*"
+      ],
+      "js": [
+        "coop.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": false

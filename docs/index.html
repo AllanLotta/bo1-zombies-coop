@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BO1 Zombies Co-op: play Black Ops 1 Zombies online with up to 4 friends</title>
+<meta name="description" content="Free Chrome extension for vel.gg/bo1z: play Black Ops 1 Zombies in your browser with up to 4 friends online. Kino der Toten and all 10 maps. Install in 2 minutes.">
+<meta property="og:title" content="BO1 Zombies Co-op: 4 players for vel.gg">
+<meta property="og:description" content="Play Black Ops 1 Zombies in your browser with up to 4 friends online. Free Chrome extension, all 10 maps.">
+<meta property="og:image" content="https://allanlotta.github.io/bo1-zombies-coop/images/social-preview.png">
+<meta property="og:url" content="https://allanlotta.github.io/bo1-zombies-coop/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="brand/icon.svg">
+<style>
+  :root { --bg: #0f0d0c; --bg2: #181513; --bg3: #221e1b; --line: #34302b; --fg: #ece6dc; --muted: #a39b90; --accent: #e2552f; --accent2: #f07a4f; --ok: #63d471; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: #9cc7ff; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+  header.top { display: flex; align-items: center; gap: 10px; padding: 18px 0; }
+  header.top img { width: 30px; height: 30px; }
+  header.top b { flex: 1; letter-spacing: .04em; }
+  .lang { display: flex; gap: 4px; }
+  .lang button { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); font-size: 14px; font-weight: 700; }
+  .lang button.on { background: var(--bg3); color: var(--fg); border-color: #4a443d; }
+  .hero { text-align: center; padding: 34px 0 10px; background: radial-gradient(800px 380px at 50% 0, rgba(226,85,47,.18), transparent 70%); }
+  .hero h1 { font-size: clamp(32px, 6vw, 56px); line-height: 1.05; margin: 0 0 14px; font-weight: 900; letter-spacing: -.5px; }
+  .hero h1 span { color: var(--accent); }
+  .hero p.sub { color: var(--muted); font-size: 20px; margin: 0 auto 26px; max-width: 640px; }
+  .cta { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 26px; border-radius: 12px; font-weight: 800; font-size: 18px; text-decoration: none; border: 1px solid var(--line); color: var(--fg); background: var(--bg3); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 10px 30px rgba(226,85,47,.35); }
+  .btn.primary:hover { background: var(--accent2); }
+  .btn small { font-weight: 600; opacity: .85; font-size: 13px; }
+  .facts { color: var(--muted); font-size: 14px; margin-top: 14px; }
+  .shot { display: block; width: 100%; border-radius: 14px; border: 1px solid var(--line); margin: 30px 0 0; }
+  section { padding: 46px 0 6px; }
+  h2 { font-size: 30px; margin: 0 0 6px; }
+  h2 + p { color: var(--muted); margin-top: 0; }
+  .steps { counter-reset: s; display: grid; gap: 22px; margin-top: 22px; }
+  .step { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+  .step h3 { margin: 0 0 6px; font-size: 20px; display: flex; gap: 12px; align-items: center; }
+  .step h3::before { counter-increment: s; content: counter(s); width: 32px; height: 32px; flex: none; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 17px; }
+  .step p { margin: 6px 0; }
+  .step img { width: 100%; border-radius: 10px; border: 1px solid var(--line); margin-top: 10px; background: #fff; }
+  .tip { font-size: 15px; color: var(--muted); background: var(--bg3); border-left: 3px solid var(--ok); padding: 8px 12px; border-radius: 6px; margin-top: 10px; }
+  .warn { border-left-color: #f4c542; }
+  code, .copy { font: 600 15px ui-monospace, Menlo, Consolas, monospace; background: #0b0a09; border: 1px solid var(--line); padding: 2px 7px; border-radius: 6px; color: #fff; }
+  .copyrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+  .copyrow button { all: unset; cursor: pointer; font-size: 14px; font-weight: 700; padding: 5px 12px; border-radius: 8px; background: var(--accent); color: #fff; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  .card { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  .card h3 { margin: 0 0 8px; }
+  .card ol { margin: 0; padding-left: 20px; }
+  details { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-top: 10px; }
+  summary { cursor: pointer; font-weight: 700; }
+  details p { color: var(--muted); margin: 8px 0 2px; }
+  footer { color: var(--muted); font-size: 14px; padding: 50px 0 40px; text-align: center; }
+  body.pt .en, body.en .pt { display: none; }
+  @media (max-width: 680px) { .two { grid-template-columns: 1fr; } .hero p.sub { font-size: 18px; } }
+</style>
+</head>
+<body class="en">
+<div class="wrap">
+  <header class="top">
+    <img src="brand/icon.svg" alt="">
+    <b>BO1 ZOMBIES CO-OP</b>
+    <div class="lang"><button data-lang="en">EN</button><button data-lang="pt">PT</button></div>
+  </header>
+
+  <div class="hero">
+    <h1 class="en">Black Ops 1 Zombies<br><span>with your squad</span>, in the browser</h1>
+    <h1 class="pt">Black Ops 1 Zombies<br><span>com o seu grupo</span>, no navegador</h1>
+    <p class="sub en">A free Chrome extension that adds online co-op for up to 4 players to <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>. Kino der Toten and all 10 maps.</p>
+    <p class="sub pt">Extensão gratuita do Chrome que adiciona co-op online para até 4 jogadores ao <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>. Kino der Toten e os 10 mapas.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip"><span class="en">Download the extension</span><span class="pt">Baixar a extensão</span> <small>.zip</small></a>
+      <a class="btn" href="#install"><span class="en">How to install</span><span class="pt">Como instalar</span></a>
+    </div>
+    <div class="facts en">Free · open source · no account · Chrome on Windows, Mac and Linux</div>
+    <div class="facts pt">Grátis · código aberto · sem cadastro · Chrome no Windows, Mac e Linux</div>
+    <img class="shot" src="images/four-players.jpg" alt="Four players in the same lobby, one browser each">
+  </div>
+
+  <section id="install">
+    <h2 class="en">Install in 4 steps</h2>
+    <h2 class="pt">Instale em 4 passos</h2>
+    <p class="en">About two minutes. Everyone who is going to play needs it.</p>
+    <p class="pt">Uns dois minutos. Todo mundo que vai jogar precisa instalar.</p>
+    <div class="steps">
+      <div class="step">
+        <h3 class="en">Download and unzip</h3>
+        <h3 class="pt">Baixe e descompacte</h3>
+        <p class="en">Click <b>Download the extension</b> above, then unzip the file (double-click it on Mac; on Windows right-click → <b>Extract All</b>). You get a folder called <code>bo1-zombies-coop</code>.</p>
+        <p class="pt">Clique em <b>Baixar a extensão</b> lá em cima e descompacte o arquivo (no Mac é só dar dois cliques; no Windows, botão direito → <b>Extrair tudo</b>). Vai aparecer uma pasta chamada <code>bo1-zombies-coop</code>.</p>
+        <div class="tip warn en">Move that folder somewhere it can stay, like Documents. Chrome keeps using it: if you delete it, the extension stops working.</div>
+        <div class="tip warn pt">Coloque essa pasta num lugar onde ela possa ficar, como Documentos. O Chrome continua usando a pasta: se você apagar, a extensão para de funcionar.</div>
+      </div>
+      <div class="step">
+        <h3 class="en">Open the extensions page and turn on Developer mode</h3>
+        <h3 class="pt">Abra a página de extensões e ligue o Modo do desenvolvedor</h3>
+        <p class="en">Copy this address, paste it in Chrome's address bar and press Enter (Chrome doesn't let websites link to it):</p>
+        <p class="pt">Copie este endereço, cole na barra de endereços do Chrome e aperte Enter (o Chrome não deixa sites abrirem essa página por link):</p>
+        <div class="copyrow"><span class="copy" id="ext-url">chrome://extensions</span><button data-copy="ext-url"><span class="en">Copy</span><span class="pt">Copiar</span></button></div>
+        <p class="en">Then switch on <b>Developer mode</b>, top right.</p>
+        <p class="pt">Depois ligue o <b>Modo do desenvolvedor</b>, no canto superior direito.</p>
+        <img class="en" src="images/install/en-1.png" alt="The Developer mode switch, top right of chrome://extensions">
+        <img class="pt" src="images/install/pt-1.png" alt="A chave Modo do desenvolvedor, no canto superior direito de chrome://extensions">
+      </div>
+      <div class="step">
+        <h3 class="en">Click "Load unpacked" and pick the folder</h3>
+        <h3 class="pt">Clique em "Carregar sem compactação" e escolha a pasta</h3>
+        <p class="en">Select the <code>bo1-zombies-coop</code> folder from step 1 (the one with <code>manifest.json</code> directly inside) and confirm.</p>
+        <p class="pt">Selecione a pasta <code>bo1-zombies-coop</code> do passo 1 (a que tem o <code>manifest.json</code> logo dentro) e confirme.</p>
+        <img class="en" src="images/install/en-2.png" alt="The Load unpacked button">
+        <img class="pt" src="images/install/pt-2.png" alt="O botão Carregar sem compactação">
+      </div>
+      <div class="step">
+        <h3 class="en">Done: open the game</h3>
+        <h3 class="pt">Pronto: abra o jogo</h3>
+        <p class="en">The extension shows up in the list. Open <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>: a <b>Co-op</b> card appears in the top right corner.</p>
+        <p class="pt">A extensão aparece na lista. Abra o <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>: um cartão <b>Co-op</b> aparece no canto superior direito.</p>
+        <img class="en" src="images/install/en-3.png" alt="The installed extension in the list">
+        <img class="pt" src="images/install/pt-3.png" alt="A extensão instalada na lista">
+        <div class="tip en">Chrome may show a popup about developer-mode extensions when it starts. That's normal for extensions installed this way: just close it (don't click Disable).</div>
+        <div class="tip pt">Ao abrir, o Chrome pode mostrar um aviso sobre extensões em modo de desenvolvedor. É normal para extensões instaladas assim: só feche o aviso (não clique em Desativar).</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="play">
+    <h2 class="en">Play</h2>
+    <h2 class="pt">Jogar</h2>
+    <div class="two">
+      <div class="card">
+        <h3 class="en">Host</h3><h3 class="pt">Quem hospeda</h3>
+        <ol class="en"><li>On the Co-op card, click <b>Host a game</b> and <b>Copy link</b>.</li><li>Send the link to up to 3 friends.</li><li>Pick a map: everyone follows you.</li><li>When the lobby shows everyone as <b>Ready</b>, click the game.</li></ol>
+        <ol class="pt"><li>No cartão Co-op, clique em <b>Hospedar partida</b> e <b>Copiar link</b>.</li><li>Mande o link para até 3 amigos.</li><li>Escolha o mapa: todos vão junto.</li><li>Quando todos aparecerem como <b>Pronto</b> no lobby, clique no jogo.</li></ol>
+      </div>
+      <div class="card">
+        <h3 class="en">Friends</h3><h3 class="pt">Amigos</h3>
+        <ol class="en"><li>Open the invite link.</li><li>Press any key when the page asks, to load the map.</li><li>When the card says <b>You are in</b>, click the game.</li></ol>
+        <ol class="pt"><li>Abra o link de convite.</li><li>Aperte qualquer tecla quando a página pedir, para carregar o mapa.</li><li>Quando o cartão disser <b>Você entrou</b>, clique no jogo.</li></ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="update">
+    <h2 class="en">Update to a new version</h2>
+    <h2 class="pt">Atualizar para uma versão nova</h2>
+    <p class="en">The Co-op card tells you when a new version is out. Extensions installed from a folder don't update by themselves, so:</p>
+    <p class="pt">O cartão Co-op avisa quando sai uma versão nova. Extensão instalada por pasta não se atualiza sozinha, então:</p>
+    <div class="card">
+      <ol class="en"><li><a href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip">Download the new zip</a> and unzip it.</li><li>Copy its files into your existing <code>bo1-zombies-coop</code> folder, replacing the old ones.</li><li>In <code>chrome://extensions</code>, click the reload arrow (↻) on BO1 Zombies Co-op, then reload vel.gg.</li></ol>
+      <ol class="pt"><li><a href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip">Baixe o zip novo</a> e descompacte.</li><li>Copie os arquivos dele para a sua pasta <code>bo1-zombies-coop</code>, substituindo os antigos.</li><li>Em <code>chrome://extensions</code>, clique na setinha de recarregar (↻) do BO1 Zombies Co-op e recarregue o vel.gg.</li></ol>
+    </div>
+  </section>
+
+  <section id="help">
+    <h2 class="en">Something went wrong?</h2>
+    <h2 class="pt">Deu algum problema?</h2>
+    <details class="en"><summary>"Manifest file is missing or unreadable"</summary><p>You picked the wrong folder. Pick the one that has <code>manifest.json</code> directly inside (not the folder around it, and not the .zip).</p></details>
+    <details class="pt"><summary>"O arquivo de manifesto está ausente ou ilegível"</summary><p>Você escolheu a pasta errada. Escolha a que tem o <code>manifest.json</code> logo dentro (não a pasta de fora, nem o .zip).</p></details>
+    <details class="en"><summary>I don't see the Co-op card on vel.gg</summary><p>Check the extension is switched on in <code>chrome://extensions</code>, then reload the vel.gg tab. The card only shows on vel.gg.</p></details>
+    <details class="pt"><summary>Não aparece o cartão Co-op no vel.gg</summary><p>Confira se a extensão está ligada em <code>chrome://extensions</code> e recarregue a aba do vel.gg. O cartão só aparece no vel.gg.</p></details>
+    <details class="en"><summary>The extension disappeared or stopped working</summary><p>The folder was deleted or moved. Put it back (or unzip it again) and click Load unpacked once more.</p></details>
+    <details class="pt"><summary>A extensão sumiu ou parou de funcionar</summary><p>A pasta foi apagada ou movida. Coloque de volta (ou descompacte de novo) e clique em Carregar sem compactação outra vez.</p></details>
+    <details class="en"><summary>"You and the host have different versions"</summary><p>Everyone should have the latest version and reload the page.</p></details>
+    <details class="pt"><summary>"Versões diferentes do jogo"</summary><p>Todo mundo precisa estar com a versão mais nova e recarregar a página.</p></details>
+    <details class="en"><summary>Does it work in Edge, Brave or Opera?</summary><p>They load Chrome extensions the same way (Edge: <code>edge://extensions</code>, Brave: <code>brave://extensions</code>), but only Chrome is tested. Firefox, Safari and phones are not supported.</p></details>
+    <details class="pt"><summary>Funciona no Edge, Brave ou Opera?</summary><p>Eles carregam extensões do Chrome do mesmo jeito (Edge: <code>edge://extensions</code>, Brave: <code>brave://extensions</code>), mas só o Chrome foi testado. Firefox, Safari e celular não funcionam.</p></details>
+    <details class="en"><summary>Do I need to own the game?</summary><p>No. The game runs from vel.gg; the extension only adds co-op on top of it, in your own browser.</p></details>
+    <details class="pt"><summary>Preciso ter o jogo?</summary><p>Não. O jogo roda pelo vel.gg; a extensão só adiciona o co-op por cima, no seu navegador.</p></details>
+  </section>
+
+  <footer>
+    <p class="en">Unofficial, free fan project, not affiliated with or endorsed by Activision or Treyarch. Call of Duty and Black Ops are trademarks of Activision Publishing. The browser port, vel.gg, is MisaDev4's work. The extension does not host or include any game files.</p>
+    <p class="pt">Projeto de fã, gratuito e não oficial, sem relação com a Activision ou a Treyarch. Call of Duty e Black Ops são marcas da Activision Publishing. O port para navegador, vel.gg, é do MisaDev4. A extensão não hospeda nem inclui arquivos do jogo.</p>
+    <p><a href="https://github.com/AllanLotta/bo1-zombies-coop">GitHub</a></p>
+  </footer>
+</div>
+<script>
+  (function () {
+    var params = new URLSearchParams(location.search);
+    var saved = null;
+    try { saved = localStorage.getItem("lang"); } catch (e) {}
+    var lang = params.get("lang") || saved || (/^pt/i.test(navigator.language || "") ? "pt" : "en");
+    function apply(l) {
+      document.body.className = l;
+      document.documentElement.lang = l === "pt" ? "pt-BR" : "en";
+      document.querySelectorAll(".lang button").forEach(function (b) { b.classList.toggle("on", b.dataset.lang === l); });
+    }
+    apply(lang === "pt" ? "pt" : "en");
+    document.querySelectorAll(".lang button").forEach(function (b) {
+      b.addEventListener("click", function () { apply(b.dataset.lang); try { localStorage.setItem("lang", b.dataset.lang); } catch (e) {} });
+    });
+    document.querySelectorAll("[data-copy]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var text = document.getElementById(b.dataset.copy).textContent;
+        if (navigator.clipboard) navigator.clipboard.writeText(text);
+        var label = b.querySelector(document.body.className === "pt" ? ".pt" : ".en");
+        var old = label.textContent;
+        label.textContent = document.body.className === "pt" ? "Copiado!" : "Copied!";
+        setTimeout(function () { label.textContent = old; }, 1500);
+      });
+    });
+  })();
+</script>
+</body>
+</html>

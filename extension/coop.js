@@ -1,4 +1,4 @@
-// BO1 Zombies Co-op 2.0.0 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
+// BO1 Zombies Co-op 2.1.0 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
 (() => {
   // shared/protocol.js
   var ROLES = Object.freeze(["host", "guest"]);
@@ -667,7 +667,9 @@
       hostPlaying: (m) => `The host is playing ${m}. Reload this page.`,
       connectFailed: "Could not start the connection to the host. Reload both pages.",
       notLetIn: "The host did not let us in. Reload both pages and try again.",
-      hostLeft: "The host left the game."
+      hostLeft: "The host left the game.",
+      updateAvailable: (v) => `Version ${v} is out. Updating takes about a minute.`,
+      updateHow: "How to update"
     },
     pt: {
       tagline: "até 4 jogadores",
@@ -776,7 +778,9 @@
       hostPlaying: (m) => `O host está jogando ${m}. Recarregue esta página.`,
       connectFailed: "Não deu para iniciar a conexão com o host. Recarreguem as duas páginas.",
       notLetIn: "O host não deixou entrar. Recarreguem as duas páginas e tentem de novo.",
-      hostLeft: "O host saiu da partida."
+      hostLeft: "O host saiu da partida.",
+      updateAvailable: (v) => `Saiu a versão ${v}. Atualizar leva cerca de 1 minuto.`,
+      updateHow: "Como atualizar"
     }
   };
   var T = STRINGS[LANG];
@@ -839,7 +843,7 @@
   }
 
   // src/session/session.js
-  var VERSION = "2.0.0";
+  var VERSION = "2.1.0";
   var AIM_LEVELS = 10;
   function createSession(search = location.search) {
     const params = new URLSearchParams(search);
@@ -897,6 +901,8 @@
       // the room as the host last described it
       hostPos: null,
       // card
+      update: null,
+      // { version, url } when a newer release is out
       error: null,
       notice: null,
       editRelay: false,
@@ -1400,7 +1406,7 @@
   function rewriteFunctions(bytes, module, edits) {
     const { code } = module;
     let [count, at] = readU32(bytes, code.body);
-    const parts = [Uint8Array.from(encodeU32(count))];
+    const parts2 = [Uint8Array.from(encodeU32(count))];
     let applied = 0;
     for (let i = 0; i < count; i += 1) {
       const [size, start2] = readU32(bytes, at);
@@ -1408,22 +1414,22 @@
       const edit = edits.get(i);
       if (edit) {
         const body = edit(bytes.subarray(start2, end));
-        parts.push(Uint8Array.from(encodeU32(body.length)), body);
+        parts2.push(Uint8Array.from(encodeU32(body.length)), body);
         applied += 1;
       } else {
-        parts.push(bytes.subarray(at, end));
+        parts2.push(bytes.subarray(at, end));
       }
       at = end;
     }
     if (applied !== edits.size) throw new Error(`patched ${applied} of ${edits.size} functions`);
-    const length = parts.reduce((sum, part) => sum + part.length, 0);
+    const length = parts2.reduce((sum, part) => sum + part.length, 0);
     const header = Uint8Array.from([10, ...encodeU32(length)]);
     const out = new Uint8Array(code.start + header.length + length + (bytes.length - code.end));
     out.set(bytes.subarray(0, code.start), 0);
     let o = code.start;
     out.set(header, o);
     o += header.length;
-    for (const part of parts) {
+    for (const part of parts2) {
       out.set(part, o);
       o += part.length;
     }
@@ -2015,18 +2021,18 @@ input::placeholder { color: var(--dim); }
     }
     pillParts(pill) {
       if (!pill) return [];
-      const parts = [];
+      const parts2 = [];
       for (const p of pill.players ?? []) {
         const d = document.createElement("span");
         d.className = `pd ${p.on ? "on" : ""}`;
         d.style.color = PLAYER_COLORS[p.n - 1];
-        parts.push(d);
+        parts2.push(d);
       }
       for (const text of pill.texts ?? []) {
-        if (parts.length) parts.push(Object.assign(document.createElement("span"), { className: "sep" }));
-        parts.push(document.createTextNode(text));
+        if (parts2.length) parts2.push(Object.assign(document.createElement("span"), { className: "sep" }));
+        parts2.push(document.createTextNode(text));
       }
-      return parts;
+      return parts2;
     }
     block(block) {
       const el = (tag, cls, text) => {
@@ -2184,6 +2190,7 @@ input::placeholder { color: var(--dim); }
     const blocks = [];
     if (session.error) blocks.push({ kind: "callout", tone: "bad", text: session.error });
     if (session.notice) blocks.push({ kind: "callout", tone: "info", text: session.notice });
+    if (session.update) blocks.push({ kind: "callout", tone: "ok", text: T.updateAvailable(session.update.version), buttons: [{ act: "openUpdate", label: T.updateHow, style: "primary" }] });
     if (!session.mode) return soloView(session, blocks, playing);
     const hosting = session.mode === "host";
     const roster = hosting ? hostRoster(session).players : guestRoster(session);
@@ -2364,6 +2371,38 @@ input::placeholder { color: var(--dim); }
     return blocks;
   }
 
+  // src/util/updates.js
+  var LATEST = "https://api.github.com/repos/AllanLotta/bo1-zombies-coop/releases/latest";
+  var UPDATE_GUIDE = "https://allanlotta.github.io/bo1-zombies-coop/#update";
+  var CHECK_EVERY_MS = 6 * 3600 * 1e3;
+  var parts = (version) => String(version).replace(/^v/, "").split(".").map((n) => parseInt(n, 10) || 0);
+  function isNewer(latest, current) {
+    const a = parts(latest);
+    const b = parts(current);
+    for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+      if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0);
+    }
+    return false;
+  }
+  async function checkForUpdate(session) {
+    let cached = null;
+    try {
+      cached = JSON.parse(readSetting("update", "null"));
+    } catch {
+    }
+    let latest = cached?.latest;
+    if (!cached || Date.now() - cached.checkedAt > CHECK_EVERY_MS) {
+      try {
+        const response = await fetch(LATEST, { headers: { accept: "application/vnd.github+json" } });
+        if (response.ok) latest = (await response.json()).tag_name;
+        saveSetting("update", JSON.stringify({ checkedAt: Date.now(), latest }));
+      } catch {
+        return;
+      }
+    }
+    if (latest && isNewer(latest, session.version)) session.update = { version: String(latest).replace(/^v/, ""), url: UPDATE_GUIDE };
+  }
+
   // src/main.js
   var TICK_MS = 50;
   var USAGE_REFRESH_MS = 6e5;
@@ -2395,6 +2434,7 @@ input::placeholder { color: var(--dim); }
     const refreshUsage = () => fetch(`${session.relay}/usage`).then((r) => r.ok ? r.json() : null).then((usage) => session.usage = Number.isFinite(usage?.fraction) ? usage : null).catch(() => session.usage = null);
     refreshUsage();
     setInterval(refreshUsage, USAGE_REFRESH_MS);
+    checkForUpdate(session);
     if (session.mode) {
       if (session.mode === "guest") session.guestId = guestIdFor(session.room);
       session.phase = session.mode === "host" ? "hosting" : "joining-room";
@@ -2437,6 +2477,7 @@ input::placeholder { color: var(--dim); }
       },
       startNow: () => session.startAlone = true,
       rejoin: () => location.reload(),
+      openUpdate: () => window.open(session.update?.url, "_blank", "noopener"),
       goToHost: () => moveToHost(session, "button"),
       settings: () => session.showSettings = !session.showSettings,
       saveName: (text) => {

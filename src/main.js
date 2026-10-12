@@ -14,6 +14,7 @@ import { T } from "./ui/strings.js";
 import { view } from "./ui/view.js";
 import { DEFAULT_RELAY, inviteLink, normalizeRelay } from "./util/relay.js";
 import { cleanName, guestIdFor, saveSetting } from "./util/settings.js";
+import { checkForUpdate } from "./util/updates.js";
 
 const TICK_MS = 50;
 const USAGE_REFRESH_MS = 600000;
@@ -56,6 +57,7 @@ function start() {
       .catch(() => (session.usage = null));
   refreshUsage();
   setInterval(refreshUsage, USAGE_REFRESH_MS);
+  checkForUpdate(session);
 
   if (session.mode) {
     if (session.mode === "guest") session.guestId = guestIdFor(session.room);
@@ -106,6 +108,7 @@ function actions(session) {
     },
     startNow: () => (session.startAlone = true),
     rejoin: () => location.reload(),
+    openUpdate: () => window.open(session.update?.url, "_blank", "noopener"),
     goToHost: () => moveToHost(session, "button"),
     settings: () => (session.showSettings = !session.showSettings),
     saveName: (text) => {
