@@ -5,6 +5,8 @@
 // Environment: HOLD_S=<s> host waits that long in the lobby before starting; PAUSETEST=<rounds> presses Escape and T
 // on several players and checks nobody crashes; SOAK=<s> keeps playing that long; DEADLINE_MIN=<min> gives up after.
 //
+// EXT=<folder> tests another build of the extension (an unzipped release, say) instead of ./extension.
+//
 // Every player is a whole game engine (several GB of memory): on a 16 GB machine keep it to 3 players.
 import { chromium } from "playwright";
 import fs from "node:fs";
@@ -19,7 +21,7 @@ const DEADLINE = Date.now() + Number(process.env.DEADLINE_MIN ?? 10) * 60000;
 
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
-const extension = path.resolve("extension");
+const extension = path.resolve(process.env.EXT ?? "extension");
 const ROOM = Array.from({ length: 16 }, () => "0123456789abcdefghjkmnpqrstvwxyz"[(Math.random() * 32) | 0]).join("").match(/.{4}/g).join("-");
 // A relay on this machine is reached through a test-only URL parameter.
 const relayParam = /127\.0\.0\.1|localhost/.test(RELAY) ? `&coopRelay=${encodeURIComponent(RELAY)}` : "";
