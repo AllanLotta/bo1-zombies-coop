@@ -102,7 +102,10 @@ const STRINGS = {
     updateAvailable: (v) => `Version ${v} is out. Updating takes about a minute.`,
     updateHow: "How to update",
     relayOverQuota: (t) => `This relay used up today's free allowance${t ? ` (it comes back at ${t})` : ""}. With your own relay, free and set up in 5 minutes, your group plays now.`,
-    relayGuide: "Create my relay"
+    relayGuide: "Create my relay",
+    relayPitch: "Co-op runs through a relay. The shared one is free but small: a few hours of play a day for everyone together, and it runs out when many people play. Your own relay is free too, takes 5 minutes to create, and is only for your group.",
+    relayPitchHost: "You are on the shared relay, which can run out on busy days. With your own (free, 5 minutes) your group never waits.",
+    relayHaveOne: "I already have one"
   },
   pt: {
     tagline: "at\xE9 4 jogadores",
@@ -204,7 +207,10 @@ const STRINGS = {
     updateAvailable: (v) => `Saiu a vers\xE3o ${v}. Atualizar leva cerca de 1 minuto.`,
     updateHow: "Como atualizar",
     relayOverQuota: (t) => `Este relay usou toda a cota gr\xE1tis de hoje${t ? ` (ela volta \xE0s ${t})` : ""}. Com o seu pr\xF3prio relay, gr\xE1tis e criado em 5 minutos, o seu grupo joga agora.`,
-    relayGuide: "Criar meu relay"
+    relayGuide: "Criar meu relay",
+    relayPitch: "O co-op passa por um relay. O compartilhado \xE9 gr\xE1tis, mas pequeno: algumas horas de jogo por dia para todo mundo junto, e acaba quando muita gente joga. O seu pr\xF3prio relay tamb\xE9m \xE9 gr\xE1tis, leva 5 minutos para criar e \xE9 s\xF3 do seu grupo.",
+    relayPitchHost: "Voc\xEA est\xE1 no relay compartilhado, que pode acabar nos dias cheios. Com o seu (gr\xE1tis, 5 minutos) o seu grupo nunca espera.",
+    relayHaveOne: "J\xE1 tenho um"
   }
 };
 export const T = STRINGS[LANG];

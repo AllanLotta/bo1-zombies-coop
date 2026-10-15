@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BO1 Zombies Co-op: play Black Ops 1 Zombies online with up to 4 friends</title>
-<meta name="description" content="Free Chrome extension for vel.gg/bo1z: play Black Ops 1 Zombies in your browser with up to 4 friends online. Kino der Toten and all 10 maps. Install in 2 minutes.">
+<meta name="description" content="Free Chrome extension for vel.gg/bo1z: play Black Ops 1 Zombies in your browser with up to 4 friends online. Kino der Toten and all 10 maps, controllers and a fun mode for the host. Install in 2 minutes.">
 <meta property="og:title" content="BO1 Zombies Co-op: 4 players for vel.gg">
 <meta property="og:description" content="Play Black Ops 1 Zombies in your browser with up to 4 friends online. Free Chrome extension, all 10 maps.">
 <meta property="og:image" content="https://allanlotta.github.io/bo1-zombies-coop/images/social-preview.png">
@@ -56,9 +56,17 @@
   details { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-top: 10px; }
   summary { cursor: pointer; font-weight: 700; }
   details p { color: var(--muted); margin: 8px 0 2px; }
+  .banner { display: flex; gap: 18px; align-items: center; margin-top: 34px; padding: 18px 22px; border-radius: 14px; background: var(--bg2); border: 1px solid var(--line); border-left: 4px solid #5aa8ff; }
+  .banner b { font-size: 19px; }
+  .banner p { margin: 4px 0 0; color: var(--muted); font-size: 15.5px; }
+  .banner .btn { flex: none; }
+  .feature { display: grid; grid-template-columns: 300px 1fr; gap: 26px; align-items: start; margin-top: 18px; }
+  .feature img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+  .feature ul { margin: 0; padding-left: 20px; }
+  .feature li { margin-bottom: 6px; }
   footer { color: var(--muted); font-size: 14px; padding: 50px 0 40px; text-align: center; }
   body.pt .en, body.en .pt { display: none; }
-  @media (max-width: 680px) { .two { grid-template-columns: 1fr; } .hero p.sub { font-size: 18px; } }
+  @media (max-width: 680px) { .two, .feature { grid-template-columns: 1fr; } .banner { flex-direction: column; align-items: flex-start; } .feature img { max-width: 320px; } .hero p.sub { font-size: 18px; } }
 </style>
 </head>
 <body class="en">
@@ -72,16 +80,26 @@
   <div class="hero">
     <h1 class="en">Black Ops 1 Zombies<br><span>with your squad</span>, in the browser</h1>
     <h1 class="pt">Black Ops 1 Zombies<br><span>com o seu grupo</span>, no navegador</h1>
-    <p class="sub en">A free Chrome extension that adds online co-op for up to 4 players to <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>. Kino der Toten and all 10 maps.</p>
-    <p class="sub pt">Extensão gratuita do Chrome que adiciona co-op online para até 4 jogadores ao <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>. Kino der Toten e os 10 mapas.</p>
+    <p class="sub en">A free Chrome extension that adds online co-op for up to 4 players to <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>. Kino der Toten and all 10 maps, controllers, and a fun mode for the host.</p>
+    <p class="sub pt">Extensão gratuita do Chrome que adiciona co-op online para até 4 jogadores ao <a href="https://vel.gg/bo1z/">vel.gg/bo1z</a>. Kino der Toten e os 10 mapas, controle e um modo diversão para o host.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip"><span class="en">Download the extension</span><span class="pt">Baixar a extensão</span> <small>.zip</small></a>
       <a class="btn" href="#install"><span class="en">How to install</span><span class="pt">Como instalar</span></a>
-      <a class="btn" href="#relay"><span class="en">Your own relay</span><span class="pt">Relay próprio</span></a>
+      <a class="btn" href="#fun"><span class="en">Fun mode</span><span class="pt">Modo diversão</span></a>
     </div>
     <div class="facts en">Free · open source · no account · Chrome on Windows, Mac and Linux</div>
     <div class="facts pt">Grátis · código aberto · sem cadastro · Chrome no Windows, Mac e Linux</div>
     <img class="shot" src="images/four-players.jpg" alt="Four players in the same lobby, one browser each">
+  </div>
+
+  <div class="banner">
+    <div>
+      <b class="en">Playing with friends? Create your own relay first.</b>
+      <b class="pt">Vai jogar com os amigos? Crie o seu relay antes.</b>
+      <p class="en">Co-op runs through a relay. The shared one is free but small, and when it runs out co-op stops for everyone until the next day. Your own relay is free too, takes 5 minutes, and is only for your group.</p>
+      <p class="pt">O co-op passa por um relay. O compartilhado é grátis, mas pequeno, e quando acaba o co-op para para todo mundo até o dia seguinte. O seu próprio relay também é grátis, leva 5 minutos e é só do seu grupo.</p>
+    </div>
+    <a class="btn" href="#relay"><span class="en">Create my relay</span><span class="pt">Criar meu relay</span></a>
   </div>
 
   <section id="install">
@@ -147,17 +165,6 @@
     </div>
   </section>
 
-  <section id="update">
-    <h2 class="en">Update to a new version</h2>
-    <h2 class="pt">Atualizar para uma versão nova</h2>
-    <p class="en">The Co-op card tells you when a new version is out. Extensions installed from a folder don't update by themselves, so:</p>
-    <p class="pt">O cartão Co-op avisa quando sai uma versão nova. Extensão instalada por pasta não se atualiza sozinha, então:</p>
-    <div class="card">
-      <ol class="en"><li><a href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip">Download the new zip</a> and unzip it.</li><li>Copy its files into your existing <code>bo1-zombies-coop</code> folder, replacing the old ones.</li><li>In <code>chrome://extensions</code>, click the reload arrow (↻) on BO1 Zombies Co-op, then reload vel.gg.</li></ol>
-      <ol class="pt"><li><a href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip">Baixe o zip novo</a> e descompacte.</li><li>Copie os arquivos dele para a sua pasta <code>bo1-zombies-coop</code>, substituindo os antigos.</li><li>Em <code>chrome://extensions</code>, clique na setinha de recarregar (↻) do BO1 Zombies Co-op e recarregue o vel.gg.</li></ol>
-    </div>
-  </section>
-
   <section id="relay">
     <h2 class="en">Your own relay (recommended for your group)</h2>
     <h2 class="pt">Relay próprio (recomendado para o seu grupo)</h2>
@@ -194,6 +201,49 @@
     <details class="pt"><summary>Prefere o terminal?</summary><p>Com Node.js 22+: <code>git clone https://github.com/AllanLotta/bo1-zombies-coop</code>, depois <code>cd bo1-zombies-coop/relay</code>, <code>npm install</code>, <code>npx wrangler login</code> e <code>npx wrangler deploy</code>. Ele mostra o endereço do seu relay.</p></details>
   </section>
 
+  <section id="fun">
+    <h2 class="en">Fun mode</h2>
+    <h2 class="pt">Modo diversão</h2>
+    <p class="en">For the host, or when you play solo. It changes your own game server, so it applies to everyone in your game, and your friends don't need anything extra.</p>
+    <p class="pt">Para quem hospeda, ou quando você joga sozinho. Ele mexe no seu próprio servidor do jogo, então vale para todo mundo na sua partida, e os amigos não precisam de nada a mais.</p>
+    <div class="feature">
+      <img class="en" src="images/fun-mode.png" alt="The fun mode panel on the Co-op card">
+      <img class="pt" src="images/fun-mode-pt.png" alt="O painel do modo diversão no cartão Co-op">
+      <div>
+        <ul class="en">
+          <li><b>Per player, or everyone at once:</b> god mode, can't die, invisible to zombies, noclip, fly, speed from 0.5× to 3×, points (+5k, +50k, max).</li>
+          <li><b>Ammo:</b> infinite clip, infinite reserve, refill everyone.</li>
+          <li><b>Zombies:</b> die in one hit, ignore players, clear the map.</li>
+          <li><b>World:</b> game speed, jump height, gravity.</li>
+          <li><b>Weapons for the host:</b> Ray Gun, Thundergun, Wunderwaffe, Winter's Howl, Wave Gun, Scavenger and more, upgraded versions included (only those that exist on the current map).</li>
+          <li><b>Reset everything</b> puts the game back to normal.</li>
+        </ul>
+        <ul class="pt">
+          <li><b>Por jogador, ou todos de uma vez:</b> imortal, não morre, invisível para os zumbis, atravessa paredes, voa, velocidade de 0,5× a 3×, pontos (+5k, +50k, máximo).</li>
+          <li><b>Munição:</b> pente infinito, reserva infinita, encher a de todos.</li>
+          <li><b>Zumbis:</b> morrem com 1 tiro, ignoram vocês, limpar o mapa.</li>
+          <li><b>Mundo:</b> velocidade do jogo, altura do pulo, gravidade.</li>
+          <li><b>Armas para o host:</b> Ray Gun, Thundergun, Wunderwaffe, Winter's Howl, Wave Gun, Scavenger e outras, inclusive as versões turbinadas (só as que existem no mapa atual).</li>
+          <li><b>Resetar tudo</b> volta o jogo ao normal.</li>
+        </ul>
+        <p class="tip en">Press <b>Esc</b> in game to open the Co-op card, then <b>Fun mode</b>. Switch off Fly and Noclip while standing on the floor, or you fall out of the map.</p>
+        <p class="tip pt">Aperte <b>Esc</b> no jogo para abrir o cartão Co-op e depois <b>Modo diversão</b>. Desligue Voa e Atravessa com os pés no chão, senão você cai para fora do mapa.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="update">
+    <h2 class="en">Update to a new version</h2>
+    <h2 class="pt">Atualizar para uma versão nova</h2>
+    <p class="en">The Co-op card tells you when a new version is out. Extensions installed from a folder don't update by themselves, so:</p>
+    <p class="pt">O cartão Co-op avisa quando sai uma versão nova. Extensão instalada por pasta não se atualiza sozinha, então:</p>
+    <div class="card">
+      <ol class="en"><li><a href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip">Download the new zip</a> and unzip it.</li><li>Copy its files into your existing <code>bo1-zombies-coop</code> folder, replacing the old ones.</li><li>In <code>chrome://extensions</code>, click the reload arrow (↻) on BO1 Zombies Co-op, then reload vel.gg.</li></ol>
+      <ol class="pt"><li><a href="https://github.com/AllanLotta/bo1-zombies-coop/releases/latest/download/bo1-zombies-coop.zip">Baixe o zip novo</a> e descompacte.</li><li>Copie os arquivos dele para a sua pasta <code>bo1-zombies-coop</code>, substituindo os antigos.</li><li>Em <code>chrome://extensions</code>, clique na setinha de recarregar (↻) do BO1 Zombies Co-op e recarregue o vel.gg.</li></ol>
+    </div>
+  </section>
+
+
   <section id="help">
     <h2 class="en">Something went wrong?</h2>
     <h2 class="pt">Deu algum problema?</h2>
@@ -209,6 +259,8 @@
     <details class="pt"><summary>"Versões diferentes do jogo"</summary><p>Todo mundo precisa estar com a versão mais nova e recarregar a página.</p></details>
     <details class="en"><summary>Does it work in Edge, Brave or Opera?</summary><p>They load Chrome extensions the same way (Edge: <code>edge://extensions</code>, Brave: <code>brave://extensions</code>), but only Chrome is tested. Firefox, Safari and phones are not supported.</p></details>
     <details class="pt"><summary>Funciona no Edge, Brave ou Opera?</summary><p>Eles carregam extensões do Chrome do mesmo jeito (Edge: <code>edge://extensions</code>, Brave: <code>brave://extensions</code>), mas só o Chrome foi testado. Firefox, Safari e celular não funcionam.</p></details>
+    <details class="en"><summary>vel.gg has its own multiplayer now. Can I still use this?</summary><p>Yes. While you host or join from the Co-op card, the extension keeps vel.gg in single-player mode and runs the co-op itself, with the lobby, controllers, synchronized pause and fun mode. To use vel.gg's own multiplayer instead, just don't host or join from the card.</p></details>
+    <details class="pt"><summary>O vel.gg agora tem multiplayer próprio. Ainda dá para usar a extensão?</summary><p>Dá. Quando você hospeda ou entra pelo cartão Co-op, a extensão deixa o vel.gg no modo single player e faz o co-op ela mesma, com o lobby, o controle, a pausa sincronizada e o modo diversão. Para usar o multiplayer do próprio vel.gg, é só não hospedar nem entrar pelo cartão.</p></details>
     <details class="en"><summary>Do I need to own the game?</summary><p>No. The game runs from vel.gg; the extension only adds co-op on top of it, in your own browser.</p></details>
     <details class="pt"><summary>Preciso ter o jogo?</summary><p>Não. O jogo roda pelo vel.gg; a extensão só adiciona o co-op por cima, no seu navegador.</p></details>
   </section>

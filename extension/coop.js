@@ -78,7 +78,16 @@
       dvars: { comSvRunning: 138586336, svPaused: 138586324, clPaused: 138586328, comMaxClients: 138586176 },
       dvarValue: 24,
       introState: 151950108,
-      loopbackAddressType: 2
+      loopbackAddressType: 2,
+      fun: {
+        entities: 91240528,
+        entitySize: 760,
+        ent: { client: 324, flags: 372, health: 404 },
+        entFlags: { god: 1, demigod: 2, notarget: 4 },
+        client: { ammoPools: 832, ammoClips: 952, ammoSlots: 15, speedScale: 10088, score: 10276, flags: 10396 },
+        clientFlags: { noclip: 1, ufo: 2 },
+        cheatsDvar: 90624216
+      }
     },
     // Served at https://vel.gg/bo1z/ since 2026-10-04, 9,618,325 bytes.
     "61192df377020627f52fa7e9fd28047bd53662aa46e5e3cd6e7fad0c5c35cc98": {
@@ -153,8 +162,21 @@
       dvarValue: 24,
       // vel.gg's page layer: 1 while the map waits behind the "click to start" screen.
       introState: 148263168,
-      loopbackAddressType: 2
+      loopbackAddressType: 2,
       // NA_LOOPBACK
+      // Fun mode panel. Read from this build's code and checked in a running game: g_entities and its stride
+      // (Cmd_God_f / SV_GameSendServerCommand), gentity fields (ClientCommand's god/demigod/notarget toggles), gclient
+      // fields (noclip/ufo toggles, ScrCmd_SetMoveSpeedScale, BG_GetAmmoPool / BG_GetAmmoClip), score (HUD-verified).
+      fun: {
+        entities: 87604176,
+        entitySize: 760,
+        ent: { client: 324, flags: 372, health: 404 },
+        entFlags: { god: 1, demigod: 2, notarget: 4 },
+        client: { ammoPools: 832, ammoClips: 952, ammoSlots: 15, speedScale: 10088, score: 10276, flags: 10396 },
+        clientFlags: { noclip: 1, ufo: 2 },
+        cheatsDvar: 86987848
+        // g_cheats; the panel's console commands need it on (devmap maps have it on)
+      }
     }
   };
   var CONNECTION = Object.freeze({ disconnected: 0, connecting: 4, challenging: 5, connected: 6, loading: 8, primed: 9, active: 10 });
@@ -251,14 +273,14 @@
   }
   function measureRefreshRate(onResult) {
     const times = [];
-    const step = (t) => {
+    const step2 = (t) => {
       times.push(t);
-      if (times.length < 30) return void requestAnimationFrame(step);
+      if (times.length < 30) return void requestAnimationFrame(step2);
       const deltas = times.slice(1).map((v, i) => v - times[i]).sort((a, b) => a - b);
       const median = deltas[deltas.length >> 1];
       if (median > 0) onResult(Math.max(30, Math.min(240, Math.round(1e3 / median))));
     };
-    requestAnimationFrame(step);
+    requestAnimationFrame(step2);
   }
 
   // src/input/gamepad.js
@@ -747,7 +769,10 @@
       updateAvailable: (v) => `Version ${v} is out. Updating takes about a minute.`,
       updateHow: "How to update",
       relayOverQuota: (t) => `This relay used up today's free allowance${t ? ` (it comes back at ${t})` : ""}. With your own relay, free and set up in 5 minutes, your group plays now.`,
-      relayGuide: "Create my relay"
+      relayGuide: "Create my relay",
+      relayPitch: "Co-op runs through a relay. The shared one is free but small: a few hours of play a day for everyone together, and it runs out when many people play. Your own relay is free too, takes 5 minutes to create, and is only for your group.",
+      relayPitchHost: "You are on the shared relay, which can run out on busy days. With your own (free, 5 minutes) your group never waits.",
+      relayHaveOne: "I already have one"
     },
     pt: {
       tagline: "até 4 jogadores",
@@ -860,7 +885,10 @@
       updateAvailable: (v) => `Saiu a versão ${v}. Atualizar leva cerca de 1 minuto.`,
       updateHow: "Como atualizar",
       relayOverQuota: (t) => `Este relay usou toda a cota grátis de hoje${t ? ` (ela volta às ${t})` : ""}. Com o seu próprio relay, grátis e criado em 5 minutos, o seu grupo joga agora.`,
-      relayGuide: "Criar meu relay"
+      relayGuide: "Criar meu relay",
+      relayPitch: "O co-op passa por um relay. O compartilhado é grátis, mas pequeno: algumas horas de jogo por dia para todo mundo junto, e acaba quando muita gente joga. O seu próprio relay também é grátis, leva 5 minutos para criar e é só do seu grupo.",
+      relayPitchHost: "Você está no relay compartilhado, que pode acabar nos dias cheios. Com o seu (grátis, 5 minutos) o seu grupo nunca espera.",
+      relayHaveOne: "Já tenho um"
     }
   };
   var T = STRINGS[LANG];
@@ -1198,8 +1226,8 @@
     }
     if (session.peer && (session.phase !== session.sentPhase || Date.now() - (session.sentPhaseAt ?? 0) > STATE_REPEAT_MS)) introduce(session);
     if (!session.peer) session.sentPhase = null;
-    const step = STEPS[session.phase];
-    if (step) step(session, engine, screen2);
+    const step2 = STEPS[session.phase];
+    if (step2) step2(session, engine, screen2);
   }
   var STEPS = {
     loading(session, engine, screen2) {
@@ -2039,6 +2067,26 @@ input::placeholder { color: var(--dim); }
 .section > button.toggle::after { content: "\\25BE"; font-size: 12px; transition: transform .15s; }
 .section.closed > button.toggle::after { transform: rotate(-90deg); }
 .credits { font-size: 11px; color: var(--dim); text-align: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+button.tchip { all: unset; cursor: pointer; font-size: 11.5px; font-weight: 650; padding: 4px 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg3); color: var(--muted); }
+button.tchip:hover { color: var(--fg); border-color: #4a443d; }
+button.tchip.on { background: rgba(226,85,47,.2); border-color: var(--accent); color: #fff; }
+button.tchip.plain { border-style: dashed; }
+.stepper { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.stepper .flabel { flex: 1; }
+.sval { min-width: 46px; text-align: center; font: 600 12px ui-monospace, Menlo, monospace; color: var(--fg); }
+button.sbtn { all: unset; cursor: pointer; width: 24px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: var(--bg3); border: 1px solid var(--line); color: var(--fg); font-weight: 700; }
+button.sbtn:hover { border-color: var(--accent); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
+.fplayer { display: grid; gap: 7px; padding: 9px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--line); }
+.fhead { display: flex; align-items: center; gap: 8px; }
+.fhead b { flex: 1; font-weight: 700; }
+.fbadge { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #111; flex: none; }
+.fmoney { font: 600 12px ui-monospace, Menlo, monospace; color: var(--ok); }
+.frow { display: flex; align-items: center; gap: 5px; }
+.frow .flabel { flex: 1; font-size: 12px; }
+.flabel { color: var(--muted); }
 .pill { display: none; }
 :host(.compact) .card { display: none; }
 :host(.compact) .pill { display: flex; align-items: center; gap: 8px; pointer-events: none; background: rgba(12,11,10,.72); border: 1px solid rgba(255,255,255,.08); border-radius: 99px; padding: 4px 10px; font: 600 11.5px system-ui, sans-serif; color: #ddd; backdrop-filter: blur(4px); }
@@ -2076,7 +2124,7 @@ input::placeholder { color: var(--dim); }
           return;
         }
         const field = button.dataset.field ? this.root.querySelector(`input[data-field="${button.dataset.field}"]`) : null;
-        this.handlers[act]?.(field ? field.value : void 0);
+        this.handlers[act]?.(field ? field.value : button.dataset.arg);
       });
       this.root.addEventListener("keydown", (event) => {
         const input = event.target.matches?.("input[data-act]") ? event.target : null;
@@ -2108,6 +2156,34 @@ input::placeholder { color: var(--dim); }
         if (input.dataset.field === focused) input.focus();
       }
     }
+    toggleChip(c) {
+      const e = document.createElement("button");
+      e.className = `tchip ${c.on ? "on" : ""} ${c.plain ? "plain" : ""}`;
+      e.textContent = c.label;
+      e.dataset.act = c.act;
+      if (c.arg != null) e.dataset.arg = c.arg;
+      return e;
+    }
+    stepper(s) {
+      const box = document.createElement("div");
+      box.className = "stepper";
+      const label = document.createElement("span");
+      label.className = "flabel";
+      label.textContent = s.label;
+      const value = document.createElement("span");
+      value.className = "sval";
+      value.textContent = s.value;
+      const make = (b, text) => {
+        const e = document.createElement("button");
+        e.className = "sbtn";
+        e.textContent = text;
+        e.dataset.act = b.act;
+        e.dataset.arg = b.arg;
+        return e;
+      };
+      box.append(label, make(s.dec, "−"), value, make(s.inc, "+"));
+      return box;
+    }
     pillParts(pill) {
       if (!pill) return [];
       const parts2 = [];
@@ -2133,6 +2209,7 @@ input::placeholder { color: var(--dim); }
       const button = (b) => {
         const e = el("button", `act ${b.style ?? ""}`, b.label);
         e.dataset.act = b.act;
+        if (b.arg != null) e.dataset.arg = b.arg;
         if (b.field) e.dataset.field = b.field;
         if (b.disabled) e.disabled = true;
         return e;
@@ -2199,9 +2276,9 @@ input::placeholder { color: var(--dim); }
           const box = el("div", "steps");
           block.steps.forEach((text, i) => {
             const state = i < block.current ? "done" : i === block.current ? `now ${block.fail ? "fail" : ""}` : "";
-            const step = el("div", `step ${state}`);
-            step.append(el("i"), el("span", "", text));
-            box.append(step);
+            const step2 = el("div", `step ${state}`);
+            step2.append(el("i"), el("span", "", text));
+            box.append(step2);
           });
           return box;
         }
@@ -2263,11 +2340,460 @@ input::placeholder { color: var(--dim); }
         }
         case "credits":
           return el("div", "credits", block.text);
+        case "chips": {
+          const box = el("div", "chips");
+          for (const c of block.chips) box.append(this.toggleChip(c));
+          return box;
+        }
+        case "stepper":
+          return this.stepper(block);
+        case "grid": {
+          const box = el("div", "grid");
+          for (const b of block.buttons) box.append(button({ ...b, style: `${b.style ?? ""} tiny` }));
+          return box;
+        }
+        case "funPlayer": {
+          const box = el("div", "fplayer");
+          const head = el("div", "fhead");
+          const badge = el("span", "fbadge", block.n ? String(block.n) : "★");
+          badge.style.background = block.n ? PLAYER_COLORS[block.n - 1] : "var(--accent)";
+          head.append(badge, el("b", "", block.name));
+          if (block.money?.value) head.append(el("span", "fmoney", `$${block.money.value}`));
+          box.append(head);
+          const chips = el("div", "chips");
+          for (const c of block.chips) chips.append(this.toggleChip(c));
+          box.append(chips, this.stepper(block.speed));
+          const money = el("div", "frow");
+          money.append(el("span", "flabel", block.money.label));
+          for (const b of block.money.buttons) money.append(button({ ...b, style: "tiny" }));
+          box.append(money);
+          return box;
+        }
         default:
           return el("div");
       }
     }
   };
+
+  // src/fun/fun.js
+  var TEXT = {
+    en: {
+      title: "Fun mode",
+      note: "Host only. Changes apply to everyone in your game.",
+      pause: "Tip: press Esc in game to open this card.",
+      flyHint: "Fly and Noclip go through walls: switch them off standing on the floor, or you fall out of the map.",
+      players: "Players",
+      all: "Everyone",
+      god: "God",
+      demigod: "Can't die",
+      notarget: "Invisible",
+      noclip: "Noclip",
+      ufo: "Fly",
+      speed: "Speed",
+      money: "Points",
+      ammo: "Ammo",
+      infiniteClip: "Infinite clip",
+      infiniteStock: "Infinite reserve",
+      refill: "Refill everyone",
+      zombies: "Zombies",
+      oneHit: "Die in one hit",
+      passive: "Ignore players",
+      clear: "Clear zombies",
+      world: "World",
+      timescale: "Game speed",
+      jump: "Jump height",
+      gravity: "Gravity",
+      weapons: "Weapons (for you)",
+      weaponMissing: (w) => `${w} is not on this map.`,
+      weaponGiven: (w) => `${w} given.`,
+      reset: "Reset everything",
+      notLoaded: "Start a map to use this.",
+      cheatsOff: "This map has cheats off: the commands won't work."
+    },
+    pt: {
+      title: "Modo diversão",
+      note: "Só o host. Vale para todo mundo na sua partida.",
+      pause: "Dica: aperte Esc no jogo para abrir este cartão.",
+      flyHint: "Voa e Atravessa passam por paredes: desligue com os pés no chão, senão o jogador cai para fora do mapa.",
+      players: "Jogadores",
+      all: "Todos",
+      god: "Imortal",
+      demigod: "Não morre",
+      notarget: "Invisível",
+      noclip: "Atravessa",
+      ufo: "Voa",
+      speed: "Velocidade",
+      money: "Pontos",
+      ammo: "Munição",
+      infiniteClip: "Pente infinito",
+      infiniteStock: "Reserva infinita",
+      refill: "Encher a de todos",
+      zombies: "Zumbis",
+      oneHit: "Morrem com 1 tiro",
+      passive: "Ignoram vocês",
+      clear: "Limpar zumbis",
+      world: "Mundo",
+      timescale: "Velocidade do jogo",
+      jump: "Altura do pulo",
+      gravity: "Gravidade",
+      weapons: "Armas (para você)",
+      weaponMissing: (w) => `${w} não existe neste mapa.`,
+      weaponGiven: (w) => `${w} entregue.`,
+      reset: "Resetar tudo",
+      notLoaded: "Abra um mapa para usar.",
+      cheatsOff: "Este mapa está com cheats desligados: os comandos não vão funcionar."
+    }
+  };
+  var F = TEXT[LANG];
+  var PLAYER_TOGGLES = ["god", "demigod", "notarget", "noclip", "ufo"];
+  var SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
+  var TIMESCALES = [0.25, 0.5, 0.75, 1, 1.5, 2];
+  var JUMPS = [39, 80, 150, 300, 600];
+  var GRAVITIES = [800, 600, 400, 200, 100];
+  var STOCK = 999;
+  var WEAPONS = [
+    ["ray_gun_zm", "Ray Gun"],
+    ["ray_gun_upgraded_zm", "Ray Gun (PaP)"],
+    ["thundergun_zm", "Thundergun"],
+    ["thundergun_upgraded_zm", "Thundergun (PaP)"],
+    ["tesla_gun_zm", "Wunderwaffe"],
+    ["freezegun_zm", "Winter's Howl"],
+    ["microwavegun_zm", "Wave Gun"],
+    ["sniper_explosive_zm", "Scavenger"],
+    ["crossbow_explosive_zm", "Crossbow"],
+    ["knife_ballistic_zm", "Ballistic Knife"],
+    ["hk21_zm", "HK21"],
+    ["rpk_zm", "RPK"],
+    ["galil_zm", "Galil"],
+    ["commando_zm", "Commando"],
+    ["famas_zm", "FAMAS"],
+    ["aug_acog_zm", "AUG"],
+    ["spas_zm", "SPAS-12"],
+    ["china_lake_zm", "China Lake"],
+    ["python_zm", "Python"],
+    ["cz75dw_zm", "CZ75 Dual"],
+    ["zombie_cymbal_monkey", "Monkey Bomb"],
+    ["zombie_black_hole_bomb", "Gersh Device"],
+    ["bowie_knife_zm", "Bowie Knife"],
+    ["claymore_zm", "Claymores"]
+  ];
+  function createFun() {
+    return {
+      open: false,
+      players: {},
+      // slot -> { god, demigod, notarget, noclip, ufo, speed }
+      infiniteClip: false,
+      infiniteStock: false,
+      oneHit: false,
+      passive: false,
+      timescale: 1,
+      jump: 39,
+      gravity: 800,
+      queue: [],
+      // console commands waiting for the engine's mailbox
+      notice: null,
+      noticeAt: 0,
+      lastStockAt: 0,
+      lastZombiesAt: 0
+    };
+  }
+  var playerState = (fun, slot) => fun.players[slot] ??= { god: false, demigod: false, notarget: false, noclip: false, ufo: false, speed: 1 };
+  function funPlayers(session) {
+    const players = [{ slot: 0, n: 1, name: session.name || (LANG === "pt" ? "Você" : "You") }];
+    if (session.mode === "host") {
+      for (const g of session.guests.values()) {
+        if (g.present && g.slot?.state === SLOT.active) players.push({ slot: g.slot.slot, n: g.seat + 1, name: g.state?.name || `${LANG === "pt" ? "Jogador" : "Player"} ${g.seat + 1}` });
+      }
+    }
+    return players;
+  }
+  var funAvailable = (session) => session.mode !== "guest";
+  function addresses(session) {
+    const f = session.build?.fun;
+    const engine = session.engine;
+    if (!f || !engine) return null;
+    return {
+      f,
+      engine,
+      ent: (slot) => f.entities + slot * f.entitySize,
+      client: (slot) => engine.int(f.entities + slot * f.entitySize + f.ent.client)
+    };
+  }
+  function setBit(engine, address, bit, on) {
+    if (on) Atomics.or(engine.i32, address >> 2, bit);
+    else Atomics.and(engine.i32, address >> 2, ~bit);
+  }
+  function say(fun, text) {
+    fun.notice = text;
+    fun.noticeAt = Date.now();
+  }
+  function funTick(session) {
+    const fun = session.fun;
+    if (fun.notice && Date.now() - fun.noticeAt > 6e3) fun.notice = null;
+    const a = addresses(session);
+    if (!a || !funAvailable(session) || screen() !== "playing") {
+      flushQueue(session);
+      return;
+    }
+    const { f, engine } = a;
+    const now = Date.now();
+    for (const { slot } of funPlayers(session)) {
+      const p = fun.players[slot];
+      if (!p) continue;
+      const ent = a.ent(slot);
+      const client = a.client(slot);
+      if (!client) continue;
+      if (p.god || p.demigod || p.notarget) {
+        if (p.god) setBit(engine, ent + f.ent.flags, f.entFlags.god, true);
+        if (p.demigod) setBit(engine, ent + f.ent.flags, f.entFlags.demigod, true);
+        if (p.notarget) setBit(engine, ent + f.ent.flags, f.entFlags.notarget, true);
+      }
+      if (p.noclip) setBit(engine, client + f.client.flags, f.clientFlags.noclip, true);
+      if (p.ufo) setBit(engine, client + f.client.flags, f.clientFlags.ufo, true);
+      if (p.speed !== 1) new Float32Array(engine.buffer)[client + f.client.speedScale >> 2] = p.speed;
+    }
+    if (fun.infiniteStock && now - fun.lastStockAt > 500) {
+      fun.lastStockAt = now;
+      refillStock(session, a);
+    }
+    if ((fun.oneHit || fun.passive) && now - fun.lastZombiesAt > 1500) {
+      fun.lastZombiesAt = now;
+      if (!fun.queue.length) {
+        if (fun.oneHit) fun.queue.push("ai axis health 1");
+        if (fun.passive) fun.queue.push("ai axis ignoreall 1");
+      }
+    }
+    flushQueue(session);
+  }
+  function flushQueue(session) {
+    const fun = session.fun;
+    if (!fun.queue.length || !session.engine) return;
+    if (session.engine.command(fun.queue[0])) fun.queue.shift();
+  }
+  function refillStock(session, a, slots = funPlayers(session).map((p) => p.slot)) {
+    const { f, engine } = a;
+    for (const slot of slots) {
+      const client = a.client(slot);
+      if (!client) continue;
+      for (let i = 0; i < f.client.ammoSlots; i += 1) {
+        const pool = client + f.client.ammoPools + 8 * i;
+        if (engine.int(pool) && engine.int(pool + 4) < STOCK) engine.setInt(pool + 4, STOCK);
+      }
+    }
+  }
+  function watchConsole(session) {
+    for (const level of ["log", "warn", "error"]) {
+      const original = console[level];
+      console[level] = function(...args) {
+        const text = typeof args[0] === "string" ? args[0] : "";
+        const missing = text.match(/Could not load weapon "([^"]+)"/);
+        if (missing && session.fun?.pendingWeapon === missing[1]) {
+          const label = WEAPONS.find(([w]) => w === missing[1])?.[1] ?? missing[1];
+          say(session.fun, F.weaponMissing(label));
+          session.fun.pendingWeapon = null;
+        }
+        return original.apply(this, args);
+      };
+    }
+  }
+  function step(list, value, direction) {
+    const i = list.indexOf(value);
+    const at = i < 0 ? list.indexOf(list.reduce((best, v) => Math.abs(v - value) < Math.abs(best - value) ? v : best, list[0])) : i;
+    return list[Math.max(0, Math.min(list.length - 1, at + direction))];
+  }
+  function funActions(session) {
+    const fun = session.fun;
+    const engineReady = () => Boolean(addresses(session));
+    const togglePlayer = (key, slot) => {
+      const a = addresses(session);
+      const p = playerState(fun, slot);
+      p[key] = !p[key];
+      if (!p[key] && a) {
+        const client = a.client(slot);
+        if (key === "noclip" || key === "ufo") {
+          if (client) setBit(a.engine, client + a.f.client.flags, a.f.clientFlags[key], false);
+        } else {
+          setBit(a.engine, a.ent(slot) + a.f.ent.flags, a.f.entFlags[key], false);
+        }
+      }
+    };
+    const setSpeed = (slot, value) => {
+      const a = addresses(session);
+      playerState(fun, slot).speed = value;
+      const client = a?.client(slot);
+      if (client) new Float32Array(a.engine.buffer)[client + a.f.client.speedScale >> 2] = value;
+    };
+    const addPoints = (slot, amount) => {
+      const a = addresses(session);
+      const client = a?.client(slot);
+      if (!client) return;
+      const score = client + a.f.client.score;
+      a.engine.setInt(score, amount === "max" ? 9999990 : amount === "zero" ? 0 : Math.min(9999990, a.engine.int(score) + amount));
+    };
+    const parse = (arg) => {
+      const [what, slot] = String(arg).split(":");
+      return { what, slot: slot === "all" ? "all" : Number(slot) };
+    };
+    const forSlots = (slot) => slot === "all" ? funPlayers(session).map((p) => p.slot) : [slot];
+    return {
+      fun: () => fun.open = !fun.open,
+      funToggle: (arg) => {
+        if (!engineReady()) return;
+        const { what, slot } = parse(arg);
+        if (slot === "all") {
+          const slots = forSlots("all");
+          const turnOn = !slots.every((s) => playerState(fun, s)[what]);
+          for (const s of slots) if (playerState(fun, s)[what] !== turnOn) togglePlayer(what, s);
+        } else {
+          togglePlayer(what, slot);
+        }
+      },
+      funSpeed: (arg) => {
+        if (!engineReady()) return;
+        const { what, slot } = parse(arg);
+        for (const s of forSlots(slot)) setSpeed(s, step(SPEEDS, playerState(fun, s).speed, what === "up" ? 1 : -1));
+      },
+      funPoints: (arg) => {
+        if (!engineReady()) return;
+        const { what, slot } = parse(arg);
+        const amount = what === "max" || what === "zero" ? what : Number(what);
+        for (const s of forSlots(slot)) addPoints(s, amount);
+      },
+      funAmmo: (arg) => {
+        if (!engineReady()) return;
+        if (arg === "clip") {
+          fun.infiniteClip = !fun.infiniteClip;
+          fun.queue.push(`set player_sustainAmmo ${fun.infiniteClip ? 1 : 0}`);
+        } else if (arg === "stock") {
+          fun.infiniteStock = !fun.infiniteStock;
+        } else if (arg === "refill") {
+          refillStock(session, addresses(session));
+        }
+      },
+      funZombies: (arg) => {
+        if (!engineReady()) return;
+        if (arg === "onehit") fun.oneHit = !fun.oneHit;
+        else if (arg === "passive") {
+          fun.passive = !fun.passive;
+          if (!fun.passive) fun.queue.push("ai axis ignoreall 0");
+        } else if (arg === "clear") fun.queue.push("ai axis delete");
+        if (fun.oneHit && arg === "onehit") fun.queue.push("ai axis health 1");
+        if (fun.passive && arg === "passive") fun.queue.push("ai axis ignoreall 1");
+      },
+      funWorld: (arg) => {
+        if (!engineReady()) return;
+        const [what, dir] = String(arg).split(":");
+        const direction = dir === "up" ? 1 : -1;
+        if (what === "timescale") {
+          fun.timescale = step(TIMESCALES, fun.timescale, direction);
+          fun.queue.push(`timescale ${fun.timescale}`);
+        } else if (what === "jump") {
+          fun.jump = step(JUMPS, fun.jump, direction);
+          fun.queue.push(`jump_height ${fun.jump}`);
+        } else if (what === "gravity") {
+          fun.gravity = step(GRAVITIES, fun.gravity, direction);
+          fun.queue.push(`bg_gravity ${fun.gravity}`);
+        }
+      },
+      funWeapon: (weapon) => {
+        if (!engineReady()) return;
+        fun.pendingWeapon = weapon;
+        fun.queue.push(`give ${weapon}`);
+        const label = WEAPONS.find(([w]) => w === weapon)?.[1] ?? weapon;
+        say(fun, F.weaponGiven(label));
+      },
+      funReset: () => {
+        const a = addresses(session);
+        for (const { slot } of funPlayers(session)) {
+          const p = playerState(fun, slot);
+          for (const key of PLAYER_TOGGLES) if (p[key]) togglePlayer(key, slot);
+          if (p.speed !== 1) setSpeed(slot, 1);
+        }
+        fun.infiniteStock = false;
+        fun.oneHit = false;
+        if (fun.passive) fun.queue.push("ai axis ignoreall 0");
+        fun.passive = false;
+        if (fun.infiniteClip) fun.queue.push("set player_sustainAmmo 0");
+        fun.infiniteClip = false;
+        if (fun.timescale !== 1) fun.queue.push("timescale 1");
+        if (fun.jump !== 39) fun.queue.push("jump_height 39");
+        if (fun.gravity !== 800) fun.queue.push("bg_gravity 800");
+        Object.assign(fun, { timescale: 1, jump: 39, gravity: 800 });
+        if (!a) fun.queue.length = 0;
+      }
+    };
+  }
+  var fmt = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0$/, "");
+  function funSection(session) {
+    const fun = session.fun;
+    const blocks = [];
+    const a = addresses(session);
+    if (!a || !["ready", "playing"].includes(screen())) {
+      blocks.push({ kind: "text", cls: "muted small", text: F.notLoaded });
+      return { kind: "section", title: F.title, act: "fun", open: fun.open, blocks };
+    }
+    const cheats = (() => {
+      const dvar = a.engine.int(a.f.cheatsDvar);
+      return dvar ? a.engine.byte(dvar + 24) === 1 : true;
+    })();
+    blocks.push({ kind: "text", cls: "muted small", text: `${F.note} ${F.pause}` });
+    if (!cheats) blocks.push({ kind: "callout", tone: "wait", text: F.cheatsOff });
+    if (fun.notice) blocks.push({ kind: "callout", tone: "info", text: fun.notice });
+    const players = funPlayers(session);
+    blocks.push({ kind: "label", text: F.players });
+    const rows = players.length > 1 ? [...players, { slot: "all", n: 0, name: F.all }] : players;
+    for (const p of rows) {
+      const state = p.slot === "all" ? null : playerState(fun, p.slot);
+      const allOn = (key) => players.every((q) => playerState(fun, q.slot)[key]);
+      const on = (key) => state ? state[key] : allOn(key);
+      const speed = state ? state.speed : players.every((q) => playerState(fun, q.slot).speed === playerState(fun, players[0].slot).speed) ? playerState(fun, players[0].slot).speed : null;
+      const score = state ? a.engine.int((a.client(p.slot) || 0) + a.f.client.score) : null;
+      blocks.push({
+        kind: "funPlayer",
+        n: p.n,
+        name: p.name,
+        chips: PLAYER_TOGGLES.map((key) => ({ act: "funToggle", arg: `${key}:${p.slot}`, label: F[key], on: on(key) })),
+        speed: { label: F.speed, value: speed == null ? "–" : `${fmt(speed)}×`, dec: { act: "funSpeed", arg: `down:${p.slot}` }, inc: { act: "funSpeed", arg: `up:${p.slot}` } },
+        money: {
+          label: F.money,
+          value: score == null ? "" : score.toLocaleString(),
+          buttons: [
+            { act: "funPoints", arg: `5000:${p.slot}`, label: "+5k" },
+            { act: "funPoints", arg: `50000:${p.slot}`, label: "+50k" },
+            { act: "funPoints", arg: `max:${p.slot}`, label: "Max" },
+            { act: "funPoints", arg: `zero:${p.slot}`, label: "0" }
+          ]
+        }
+      });
+    }
+    if (players.some((p) => fun.players[p.slot]?.noclip || fun.players[p.slot]?.ufo)) blocks.push({ kind: "callout", tone: "wait", text: F.flyHint });
+    blocks.push({ kind: "label", text: F.ammo });
+    blocks.push({
+      kind: "chips",
+      chips: [
+        { act: "funAmmo", arg: "clip", label: F.infiniteClip, on: fun.infiniteClip },
+        { act: "funAmmo", arg: "stock", label: F.infiniteStock, on: fun.infiniteStock },
+        { act: "funAmmo", arg: "refill", label: F.refill, on: false, plain: true }
+      ]
+    });
+    blocks.push({ kind: "label", text: F.zombies });
+    blocks.push({
+      kind: "chips",
+      chips: [
+        { act: "funZombies", arg: "onehit", label: F.oneHit, on: fun.oneHit },
+        { act: "funZombies", arg: "passive", label: F.passive, on: fun.passive },
+        { act: "funZombies", arg: "clear", label: F.clear, on: false, plain: true }
+      ]
+    });
+    blocks.push({ kind: "label", text: F.world });
+    blocks.push({ kind: "stepper", label: F.timescale, value: `${fmt(fun.timescale)}×`, dec: { act: "funWorld", arg: "timescale:down" }, inc: { act: "funWorld", arg: "timescale:up" } });
+    blocks.push({ kind: "stepper", label: F.jump, value: String(fun.jump), dec: { act: "funWorld", arg: "jump:down" }, inc: { act: "funWorld", arg: "jump:up" } });
+    blocks.push({ kind: "stepper", label: F.gravity, value: String(fun.gravity), dec: { act: "funWorld", arg: "gravity:down" }, inc: { act: "funWorld", arg: "gravity:up" } });
+    blocks.push({ kind: "label", text: F.weapons, aside: MAP_SLUGS[session.zone ?? currentZone()] ?? "" });
+    blocks.push({ kind: "grid", buttons: WEAPONS.map(([w, label]) => ({ act: "funWeapon", arg: w, label })) });
+    blocks.push({ kind: "buttons", buttons: [{ act: "funReset", label: F.reset, style: "ghost" }] });
+    return { kind: "section", title: F.title, act: "fun", open: fun.open, blocks };
+  }
 
   // src/ui/view.js
   var COPIED_MS = 2e3;
@@ -2295,6 +2821,7 @@ input::placeholder { color: var(--dim); }
     if (!hosting && session.phase === "connected" && session.hostPos) actions2.push({ act: "goToHost", label: T.goToHost });
     actions2.push({ act: "leave", label: T.leave, style: "ghost" });
     blocks.push({ kind: "buttons", buttons: actions2 });
+    if (funAvailable(session)) blocks.push(funSection(session));
     blocks.push(settingsSection(session, true));
     const ping = session.stats?.rtt != null ? `${Math.round(session.stats.rtt)} ms` : "–";
     const pill = {
@@ -2307,6 +2834,8 @@ input::placeholder { color: var(--dim); }
     blocks.push({ kind: "text", cls: "muted", text: T.intro });
     blocks.push({ kind: "buttons", buttons: [{ act: "host", label: T.host, style: "primary" }] });
     blocks.push({ kind: "input", label: T.joinLabel, field: "join", placeholder: T.joinPlaceholder, act: "join", button: T.join });
+    if (onSharedRelay(session)) blocks.push({ kind: "callout", tone: "info", text: T.relayPitch, buttons: relayButtons() });
+    if (session.engine) blocks.push(funSection(session));
     blocks.push(settingsSection(session, false));
     const pill = session.gamepad?.status === "active" ? { texts: ["🎮"] } : null;
     return { chip: { text: T.chip.solo }, tagline: T.tagline, blocks, compact: playing && !session.error && !session.notice, pill };
@@ -2315,7 +2844,7 @@ input::placeholder { color: var(--dim); }
     const freeSeats = roster.filter((p) => p.status === "free").length;
     const onTheWay = roster.some((p) => !p.host && ON_THE_WAY.includes(p.status));
     const mapOpen = Boolean(session.engine) || screen2 === "loading" || screen2 === "download";
-    const step = screen2 === "playing" ? 3 : screen2 === "ready" ? 2 : mapOpen ? 1 : 0;
+    const step2 = screen2 === "playing" ? 3 : screen2 === "ready" ? 2 : mapOpen ? 1 : 0;
     const linkCopied = Date.now() - session.copiedLinkAt < COPIED_MS;
     const codeCopied = Date.now() - session.copiedCodeAt < COPIED_MS;
     blocks.push({
@@ -2328,12 +2857,13 @@ input::placeholder { color: var(--dim); }
         { act: "copyCode", label: codeCopied ? T.copied : T.copyCode, style: codeCopied ? "done" : "" }
       ]
     });
-    blocks.push({ kind: "steps", steps: T.stepsHost, current: step });
+    blocks.push({ kind: "steps", steps: T.stepsHost, current: step2 });
     if (!mapOpen) blocks.push({ kind: "callout", tone: "info", text: T.pickMap });
     else if (session.gate) blocks.push({ kind: "callout", tone: "wait", text: T.gate, buttons: [{ act: "startNow", label: T.startNow }] });
     else if (screen2 === "ready" && !onTheWay && roster.some((p) => !p.host && p.status === "ready")) blocks.push({ kind: "callout", tone: "ok", text: T.allIn });
     else if (onTheWay && screen2 === "playing") blocks.push({ kind: "callout", tone: "info", text: T.latecomers });
     if (session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+    if (onSharedRelay(session) && screen2 !== "playing") blocks.push({ kind: "callout", tone: "info", text: T.relayPitchHost, buttons: relayButtons() });
     blocks.push(mapBlock(MAP_SLUGS[session.zone ?? currentZone()] ?? null, currentHorde(), T.mapSubHost));
     if (session.error) return { text: T.chip.error, tone: "bad" };
     if (session.paused) return { text: T.chip.paused, tone: "wait" };
@@ -2345,13 +2875,13 @@ input::placeholder { color: var(--dim); }
     const failed = ["ended", "failed"].includes(phase);
     const slug = session.lobby?.slug ?? session.hostInfo?.slug ?? null;
     const mapName = slug ? MAP_NAMES[slug] : null;
-    let step = GUEST_STEP[phase] ?? session.lastStep ?? 0;
-    if (phase === "joining-room" && session.hostInfo?.slug) step = 1;
-    if (!failed) session.lastStep = step;
+    let step2 = GUEST_STEP[phase] ?? session.lastStep ?? 0;
+    if (phase === "joining-room" && session.hostInfo?.slug) step2 = 1;
+    if (!failed) session.lastStep = step2;
     if (session.inviteRelay && session.inviteRelay !== session.relay) {
       blocks.push({ kind: "callout", tone: "wait", text: T.otherRelay(new URL(session.inviteRelay).hostname), buttons: [{ act: "useInviteRelay", label: T.useRelay, style: "primary" }] });
     }
-    blocks.push({ kind: "steps", steps: T.stepsGuest, current: step, fail: failed });
+    blocks.push({ kind: "steps", steps: T.stepsGuest, current: step2, fail: failed });
     const onHostMap = session.hostInfo?.slug && currentSlug() === session.hostInfo.slug;
     if ((phase === "loading" || phase === "joining-room" && onHostMap) && screen2 === "landing") {
       blocks.push({ kind: "callout", tone: "wait", title: "⌨", text: T.pressKey });
@@ -2459,10 +2989,14 @@ input::placeholder { color: var(--dim); }
       blocks.push({ kind: "text", cls: "muted small", text: T.relayEditNote });
       blocks.push({ kind: "buttons", buttons: [{ act: "defaultRelay", label: T.useDefault }, { act: "editRelay", label: T.cancel, style: "ghost" }] });
     } else {
-      blocks.push({ kind: "buttons", buttons: [{ act: "editRelay", label: T.changeRelay, style: "ghost" }] });
+      const buttons = [{ act: "editRelay", label: T.changeRelay, style: "ghost" }];
+      if (!custom) buttons.unshift({ act: "openRelayGuide", label: T.relayGuide });
+      blocks.push({ kind: "buttons", buttons });
     }
     return blocks;
   }
+  var onSharedRelay = (session) => session.relay === DEFAULT_RELAY && !session.overQuota;
+  var relayButtons = () => [{ act: "openRelayGuide", label: T.relayGuide }, { act: "editRelayNow", label: T.relayHaveOne, style: "ghost" }];
 
   // src/util/updates.js
   var LATEST = "https://api.github.com/repos/AllanLotta/bo1-zombies-coop/releases/latest";
@@ -2505,6 +3039,8 @@ input::placeholder { color: var(--dim); }
   function start() {
     const session = createSession();
     window.__bo1Coop = session;
+    session.fun = createFun();
+    watchConsole(session);
     if (session.mode) keepSinglePlayer(session.room);
     hookWasm(session);
     hookMain(session);
@@ -2543,6 +3079,7 @@ input::placeholder { color: var(--dim); }
     try {
       if (session.mode === "host") hostTick(session);
       else if (session.mode === "guest") guestTick(session);
+      funTick(session);
     } catch (error) {
       session.error = error.message;
       session.note(`tick failed: ${error.stack ?? error}`);
@@ -2601,7 +3138,8 @@ input::placeholder { color: var(--dim); }
         session.notice = T.controllerReload;
       },
       aimDown: () => setAim(session, session.aimLevel - 1),
-      aimUp: () => setAim(session, session.aimLevel + 1)
+      aimUp: () => setAim(session, session.aimLevel + 1),
+      ...funActions(session)
     };
   }
   function setAim(session, level) {

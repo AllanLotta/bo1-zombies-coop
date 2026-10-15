@@ -8,6 +8,7 @@ import { validSeat } from "../session/session.js";
 import { DEFAULT_RELAY } from "../util/relay.js";
 import { cleanName } from "../util/settings.js";
 import { T } from "./strings.js";
+import { funAvailable, funSection } from "../fun/fun.js";
 
 const COPIED_MS = 2000;
 const CONNECTED = ["ingame", "ready", "lobby"];
@@ -38,6 +39,7 @@ export function view(session) {
   if (!hosting && session.phase === "connected" && session.hostPos) actions.push({ act: "goToHost", label: T.goToHost });
   actions.push({ act: "leave", label: T.leave, style: "ghost" });
   blocks.push({ kind: "buttons", buttons: actions });
+  if (funAvailable(session)) blocks.push(funSection(session));
   blocks.push(settingsSection(session, true));
 
   const ping = session.stats?.rtt != null ? `${Math.round(session.stats.rtt)} ms` : "–";
@@ -52,6 +54,8 @@ function soloView(session, blocks, playing) {
   blocks.push({ kind: "text", cls: "muted", text: T.intro });
   blocks.push({ kind: "buttons", buttons: [{ act: "host", label: T.host, style: "primary" }] });
   blocks.push({ kind: "input", label: T.joinLabel, field: "join", placeholder: T.joinPlaceholder, act: "join", button: T.join });
+  if (onSharedRelay(session)) blocks.push({ kind: "callout", tone: "info", text: T.relayPitch, buttons: relayButtons() });
+  if (session.engine) blocks.push(funSection(session));
   blocks.push(settingsSection(session, false));
   const pill = session.gamepad?.status === "active" ? { texts: ["\u{1F3AE}"] } : null;
   return { chip: { text: T.chip.solo }, tagline: T.tagline, blocks, compact: playing && !session.error && !session.notice, pill };
@@ -82,6 +86,7 @@ function hostSection(session, blocks, roster, screen) {
   else if (screen === "ready" && !onTheWay && roster.some((p) => !p.host && p.status === "ready")) blocks.push({ kind: "callout", tone: "ok", text: T.allIn });
   else if (onTheWay && screen === "playing") blocks.push({ kind: "callout", tone: "info", text: T.latecomers });
   if (session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+  if (onSharedRelay(session) && screen !== "playing") blocks.push({ kind: "callout", tone: "info", text: T.relayPitchHost, buttons: relayButtons() });
 
   blocks.push(mapBlock(MAP_SLUGS[session.zone ?? currentZone()] ?? null, currentHorde(), T.mapSubHost));
 
@@ -223,7 +228,13 @@ function relayBlocks(session) {
     blocks.push({ kind: "text", cls: "muted small", text: T.relayEditNote });
     blocks.push({ kind: "buttons", buttons: [{ act: "defaultRelay", label: T.useDefault }, { act: "editRelay", label: T.cancel, style: "ghost" }] });
   } else {
-    blocks.push({ kind: "buttons", buttons: [{ act: "editRelay", label: T.changeRelay, style: "ghost" }] });
+    const buttons = [{ act: "editRelay", label: T.changeRelay, style: "ghost" }];
+    if (!custom) buttons.unshift({ act: "openRelayGuide", label: T.relayGuide });
+    blocks.push({ kind: "buttons", buttons });
   }
   return blocks;
 }
+
+/** On the shared default relay, and not already told it ran out. */
+const onSharedRelay = (session) => session.relay === DEFAULT_RELAY && !session.overQuota;
+const relayButtons = () => [{ act: "openRelayGuide", label: T.relayGuide }, { act: "editRelayNow", label: T.relayHaveOne, style: "ghost" }];

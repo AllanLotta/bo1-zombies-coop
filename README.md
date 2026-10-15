@@ -5,7 +5,8 @@
 # BO1 Zombies Co-op
 
 **Play Black Ops 1 Zombies in your browser with up to 4 friends, online.**<br>
-A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, send a link, play Kino der Toten together.
+A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, send a link, play Kino der Toten together.<br>
+With controller support and a fun mode for the host (god mode, wonder weapons, infinite ammo, flying and more).
 
 [![Latest release](https://img.shields.io/github/v/release/AllanLotta/bo1-zombies-coop?label=download&color=e2552f)](https://github.com/AllanLotta/bo1-zombies-coop/releases/latest)
 ![Players](https://img.shields.io/badge/players-up%20to%204-63d471)
@@ -20,6 +21,12 @@ A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, se
 
 </div>
 
+> [!IMPORTANT]
+> **Playing with friends? [Create your own relay](#run-your-own-relay-recommended-for-your-group) first.** Co-op runs
+> through a relay. The shared one is free but small: a few hours of play a day for **everyone** together, and when it
+> runs out co-op stops until midnight UTC. Your own relay is free too, takes 5 minutes, and is only for your group.
+> The Co-op card has a **Create my relay** button that takes you to the [step-by-step guide](https://allanlotta.github.io/bo1-zombies-coop/#relay).
+
 ## Features
 
 - **Up to 4 players online**: one hosts, up to three join with an invite link. Works over the internet; nobody needs
@@ -30,6 +37,8 @@ A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, se
 - **All 10 maps**, Hell mode included: Kino der Toten, Five, Der Riese, Nacht der Untoten, Verrückt, Shi No Numa,
   Ascension, Call of the Dead, Shangri-La and Moon.
 - **Pause together**: any player opening the menu pauses everyone.
+- **Fun mode** for the host: god mode, invisible, noclip, fly, speed and points per player; infinite ammo; one-hit or
+  passive zombies; game speed, jump and gravity; wonder weapons. [More below](#fun-mode).
 - **PlayStation and Xbox controllers** with adjustable aim speed.
 - **English and Portuguese**, picked from your browser's language.
 - **Stable**: fixes the crash where one player pressing Escape or T (chat) took down the other players' games.
@@ -83,6 +92,30 @@ Tips:
   as in the original game.
 - Spawned far away from the others? **Go to the host** on the card brings you next to them.
 
+## Fun mode
+
+<img src="docs/images/fun-mode.png" width="300" align="right" alt="The fun mode panel on the Co-op card">
+
+For the host, or when you play solo. It changes your own game server, so it applies to everyone in your game, and
+your friends don't need anything extra. Press **Esc** in game to open the Co-op card, then **Fun mode**.
+
+- **Per player, or everyone at once:** god mode, can't die, invisible to zombies, noclip, fly, speed from 0.5× to
+  3×, points (+5k, +50k, max).
+- **Ammo:** infinite clip, infinite reserve, refill everyone.
+- **Zombies:** die in one hit, ignore players, clear the map.
+- **World:** game speed, jump height, gravity.
+- **Weapons for the host:** Ray Gun, Thundergun, Wunderwaffe, Winter's Howl, Wave Gun, Scavenger, Crossbow,
+  Ballistic Knife, Monkey Bomb, Gersh Device and more, upgraded versions included. Only the ones that exist on the
+  current map work; the card tells you when one doesn't.
+- **Reset everything** puts the game back to normal.
+
+Switch off Fly and Noclip while standing on the floor, or you fall out of the map.
+
+Everything goes through the engine's own cheat mechanisms (the flags behind its `god`, `notarget`, `noclip` and
+`ufo` console commands, its ammo and score fields, and commands such as `give`, `timescale` and `ai`).
+
+<br clear="right">
+
 ## Troubleshooting
 
 | Problem | What to do |
@@ -91,6 +124,7 @@ Tips:
 | "You and the host have different versions" | Both reload the page (the engine is cached per browser). |
 | "This game is full" | A room holds 4 players. Wait for a free seat or host another room. |
 | Stuck on "Next in line" | Players connect one at a time; it moves on within a minute. If it does not, reload. |
+| vel.gg has its own multiplayer now | While you host or join from the Co-op card, the extension keeps vel.gg in single-player mode and runs co-op itself (lobby, controllers, synchronized pause, fun mode). To use vel.gg's own multiplayer, don't host or join from the card. |
 | "This relay used up today's free allowance" | The shared relay is out for today (it comes back at midnight UTC). [Create your own relay](#run-your-own-relay-recommended-for-your-group): 5 minutes, free. |
 
 Works in Chrome. Other Chromium browsers (Edge, Brave, Opera) load the same extension but are not tested.
@@ -129,8 +163,9 @@ Then step 4 above.
 
 ## How it works
 
-vel.gg runs the decompiled Black Ops 1 engine as WebAssembly. Its multiplayer code is still inside, but the network
-layer is gone, so players can only talk to their own local server through in-memory "loopback" queues. The extension:
+vel.gg runs the decompiled Black Ops 1 engine as WebAssembly. The engine's own client and server still talk through
+in-memory "loopback" queues, as a listen server does for its local player. The extension builds on that, separately
+from vel.gg's own multiplayer (which it keeps switched off during a session):
 
 1. **Patches the engine as it loads** (after checking its exact SHA-256 and every function by name): a mailbox for
    console commands, a switch to park the local server, an extra inbound queue for the host's server, and two
@@ -150,6 +185,7 @@ src/
   session/        host, guest, lobby, control messages, engine hooks
   ui/             the card, its view model, styles and texts (EN/PT)
   input/          controller support
+  fun/            fun mode (host cheats panel)
   game/ util/     vel.gg page helpers, settings, relay selection
 relay/            Cloudflare Worker + Durable Objects, and the wire protocol (deploys on its own)
 test/             relay, engine patch, end-to-end and UI preview tests
@@ -183,6 +219,13 @@ Not affiliated with Activision or Treyarch. Call of Duty and Black Ops are trade
 
 **Jogue Black Ops 1 Zombies no navegador com até 4 amigos, online.** Extensão gratuita do Chrome para o
 [vel.gg/bo1z](https://vel.gg/bo1z/): um hospeda, manda o link, e todo mundo joga junto, inclusive no Kino der Toten.
+Com controle e um modo diversão para o host (imortal, armas especiais, munição infinita, voar e mais).
+
+> [!IMPORTANT]
+> **Vai jogar com os amigos? [Crie o seu relay](#relay-próprio-recomendado-para-o-seu-grupo) antes.** O co-op passa
+> por um relay. O compartilhado é grátis, mas pequeno: algumas horas de jogo por dia para **todo mundo** junto, e quando
+> acaba o co-op para até as 21h (horário de Brasília). O seu próprio relay também é grátis, leva 5 minutos e é só do
+> seu grupo. O cartão Co-op tem um botão **Criar meu relay** que leva ao [passo a passo](https://allanlotta.github.io/bo1-zombies-coop/?lang=pt#relay).
 
 <table>
 <tr>
@@ -198,6 +241,9 @@ Not affiliated with Activision or Treyarch. Call of Duty and Black Ops are trade
 - **Todos nascem juntos**: o início do host espera os outros entrarem (ou começa na hora, se preferir).
 - **Os 10 mapas**, com Hell mode.
 - **Pausa sincronizada**: quem abre o menu pausa para todos.
+- **Modo diversão** para o host: imortal, invisível, atravessar paredes, voar, velocidade e pontos por jogador;
+  munição infinita; zumbis de 1 tiro ou que ignoram vocês; velocidade do jogo, pulo e gravidade; armas especiais.
+  [Detalhes abaixo](#modo-diversão).
 - **Controle de PlayStation e Xbox**, com ajuste de velocidade da mira.
 - **Em português** quando o navegador está em português.
 - **Corrige o crash** em que um jogador apertando ESC ou T (chat) derrubava o jogo dos outros.
@@ -232,6 +278,28 @@ junto). Espere na tela "click to start" até todos aparecerem como **Pronto** no
 Dicas: coloque seu nome em **Configurações**. Se alguém cair, é só clicar em **Voltar para a partida** (quem entra
 depois do início assiste até a próxima rodada, como no jogo original). Nasceu longe? **Ir até o host**.
 
+### Modo diversão
+
+<img src="docs/images/fun-mode-pt.png" width="300" align="right" alt="O painel do modo diversão no cartão Co-op">
+
+Para quem hospeda, ou quando você joga sozinho. Ele mexe no seu próprio servidor do jogo, então vale para todo mundo
+na sua partida, e os amigos não precisam de nada a mais. Aperte **Esc** no jogo para abrir o cartão Co-op e depois
+**Modo diversão**.
+
+- **Por jogador, ou todos de uma vez:** imortal, não morre, invisível para os zumbis, atravessa paredes, voa,
+  velocidade de 0,5× a 3×, pontos (+5k, +50k, máximo).
+- **Munição:** pente infinito, reserva infinita, encher a de todos.
+- **Zumbis:** morrem com 1 tiro, ignoram vocês, limpar o mapa.
+- **Mundo:** velocidade do jogo, altura do pulo, gravidade.
+- **Armas para o host:** Ray Gun, Thundergun, Wunderwaffe, Winter's Howl, Wave Gun, Scavenger, Crossbow, Ballistic
+  Knife, Monkey Bomb, Gersh Device e outras, inclusive as versões turbinadas. Só funcionam as que existem no mapa
+  atual; o cartão avisa quando uma não existe.
+- **Resetar tudo** volta o jogo ao normal.
+
+Desligue Voa e Atravessa com os pés no chão, senão você cai para fora do mapa.
+
+<br clear="right">
+
 ### Problemas comuns
 
 | Problema | O que fazer |
@@ -240,6 +308,7 @@ depois do início assiste até a próxima rodada, como no jogo original). Nasceu
 | "Versões diferentes do jogo" | Os dois recarregam a página. |
 | "Esta partida está cheia" | A sala comporta 4 jogadores. |
 | Parado em "Na fila para entrar" | Os jogadores entram um de cada vez; em até um minuto anda. Se não, recarregue. |
+| O vel.gg agora tem multiplayer próprio | Quando você hospeda ou entra pelo cartão Co-op, a extensão deixa o vel.gg no modo single player e faz o co-op ela mesma (lobby, controle, pausa sincronizada, modo diversão). Para usar o multiplayer do vel.gg, é só não hospedar nem entrar pelo cartão. |
 | "Este relay usou toda a cota grátis de hoje" | O relay compartilhado acabou por hoje (volta às 21h de Brasília). [Crie o seu relay](#relay-próprio-recomendado-para-o-seu-grupo): 5 minutos, grátis. |
 
 ### Relay próprio (recomendado para o seu grupo)

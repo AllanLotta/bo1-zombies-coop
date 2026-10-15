@@ -89,6 +89,26 @@ input::placeholder { color: var(--dim); }
 .section > button.toggle::after { content: "\\25BE"; font-size: 12px; transition: transform .15s; }
 .section.closed > button.toggle::after { transform: rotate(-90deg); }
 .credits { font-size: 11px; color: var(--dim); text-align: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+button.tchip { all: unset; cursor: pointer; font-size: 11.5px; font-weight: 650; padding: 4px 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg3); color: var(--muted); }
+button.tchip:hover { color: var(--fg); border-color: #4a443d; }
+button.tchip.on { background: rgba(226,85,47,.2); border-color: var(--accent); color: #fff; }
+button.tchip.plain { border-style: dashed; }
+.stepper { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.stepper .flabel { flex: 1; }
+.sval { min-width: 46px; text-align: center; font: 600 12px ui-monospace, Menlo, monospace; color: var(--fg); }
+button.sbtn { all: unset; cursor: pointer; width: 24px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: var(--bg3); border: 1px solid var(--line); color: var(--fg); font-weight: 700; }
+button.sbtn:hover { border-color: var(--accent); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
+.fplayer { display: grid; gap: 7px; padding: 9px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--line); }
+.fhead { display: flex; align-items: center; gap: 8px; }
+.fhead b { flex: 1; font-weight: 700; }
+.fbadge { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #111; flex: none; }
+.fmoney { font: 600 12px ui-monospace, Menlo, monospace; color: var(--ok); }
+.frow { display: flex; align-items: center; gap: 5px; }
+.frow .flabel { flex: 1; font-size: 12px; }
+.flabel { color: var(--muted); }
 .pill { display: none; }
 :host(.compact) .card { display: none; }
 :host(.compact) .pill { display: flex; align-items: center; gap: 8px; pointer-events: none; background: rgba(12,11,10,.72); border: 1px solid rgba(255,255,255,.08); border-radius: 99px; padding: 4px 10px; font: 600 11.5px system-ui, sans-serif; color: #ddd; backdrop-filter: blur(4px); }

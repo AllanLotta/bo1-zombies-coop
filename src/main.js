@@ -13,6 +13,7 @@ import { Card } from "./ui/card.js";
 import { LANG, T } from "./ui/strings.js";
 import { view } from "./ui/view.js";
 import { DEFAULT_RELAY, inviteLink, normalizeRelay } from "./util/relay.js";
+import { createFun, funActions, funTick, watchConsole } from "./fun/fun.js";
 import { cleanName, guestIdFor, saveSetting } from "./util/settings.js";
 import { checkForUpdate, RELAY_GUIDE } from "./util/updates.js";
 
@@ -25,6 +26,8 @@ if (!window.__bo1Coop) start();
 function start() {
   const session = createSession();
   window.__bo1Coop = session;
+  session.fun = createFun();
+  watchConsole(session);
   if (session.mode) keepSinglePlayer(session.room);
 
   // Both hooks must be in place before vel.gg loads the engine.
@@ -75,6 +78,7 @@ function tick(session) {
   try {
     if (session.mode === "host") hostTick(session);
     else if (session.mode === "guest") guestTick(session);
+    funTick(session);
   } catch (error) {
     session.error = error.message;
     session.note(`tick failed: ${error.stack ?? error}`);
@@ -139,6 +143,7 @@ function actions(session) {
     },
     aimDown: () => setAim(session, session.aimLevel - 1),
     aimUp: () => setAim(session, session.aimLevel + 1),
+    ...funActions(session),
   };
 }
 

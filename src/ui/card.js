@@ -31,7 +31,7 @@ export class Card {
         return;
       }
       const field = button.dataset.field ? this.root.querySelector(`input[data-field="${button.dataset.field}"]`) : null;
-      this.handlers[act]?.(field ? field.value : void 0);
+      this.handlers[act]?.(field ? field.value : button.dataset.arg);
     });
     this.root.addEventListener("keydown", (event) => {
       const input = event.target.matches?.("input[data-act]") ? event.target : null;
@@ -63,6 +63,34 @@ export class Card {
       if (input.dataset.field === focused) input.focus();
     }
   }
+  toggleChip(c) {
+    const e = document.createElement("button");
+    e.className = `tchip ${c.on ? "on" : ""} ${c.plain ? "plain" : ""}`;
+    e.textContent = c.label;
+    e.dataset.act = c.act;
+    if (c.arg != null) e.dataset.arg = c.arg;
+    return e;
+  }
+  stepper(s) {
+    const box = document.createElement("div");
+    box.className = "stepper";
+    const label = document.createElement("span");
+    label.className = "flabel";
+    label.textContent = s.label;
+    const value = document.createElement("span");
+    value.className = "sval";
+    value.textContent = s.value;
+    const make = (b, text) => {
+      const e = document.createElement("button");
+      e.className = "sbtn";
+      e.textContent = text;
+      e.dataset.act = b.act;
+      e.dataset.arg = b.arg;
+      return e;
+    };
+    box.append(label, make(s.dec, "\u2212"), value, make(s.inc, "+"));
+    return box;
+  }
   pillParts(pill) {
     if (!pill) return [];
     const parts = [];
@@ -88,6 +116,7 @@ export class Card {
     const button = (b) => {
       const e = el("button", `act ${b.style ?? ""}`, b.label);
       e.dataset.act = b.act;
+      if (b.arg != null) e.dataset.arg = b.arg;
       if (b.field) e.dataset.field = b.field;
       if (b.disabled) e.disabled = true;
       return e;
@@ -218,6 +247,35 @@ export class Card {
       }
       case "credits":
         return el("div", "credits", block.text);
+      case "chips": {
+        const box = el("div", "chips");
+        for (const c of block.chips) box.append(this.toggleChip(c));
+        return box;
+      }
+      case "stepper":
+        return this.stepper(block);
+      case "grid": {
+        const box = el("div", "grid");
+        for (const b of block.buttons) box.append(button({ ...b, style: `${b.style ?? ""} tiny` }));
+        return box;
+      }
+      case "funPlayer": {
+        const box = el("div", "fplayer");
+        const head = el("div", "fhead");
+        const badge = el("span", "fbadge", block.n ? String(block.n) : "\u2605");
+        badge.style.background = block.n ? PLAYER_COLORS[block.n - 1] : "var(--accent)";
+        head.append(badge, el("b", "", block.name));
+        if (block.money?.value) head.append(el("span", "fmoney", `$${block.money.value}`));
+        box.append(head);
+        const chips = el("div", "chips");
+        for (const c of block.chips) chips.append(this.toggleChip(c));
+        box.append(chips, this.stepper(block.speed));
+        const money = el("div", "frow");
+        money.append(el("span", "flabel", block.money.label));
+        for (const b of block.money.buttons) money.append(button({ ...b, style: "tiny" }));
+        box.append(money);
+        return box;
+      }
       default:
         return el("div");
     }

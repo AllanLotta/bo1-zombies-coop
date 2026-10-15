@@ -54,6 +54,15 @@ export const BUILDS = {
     dvarValue: 24,
     introState: 151950108,
     loopbackAddressType: 2,
+    fun: {
+      entities: 91240528,
+      entitySize: 760,
+      ent: { client: 324, flags: 372, health: 404 },
+      entFlags: { god: 1, demigod: 2, notarget: 4 },
+      client: { ammoPools: 832, ammoClips: 952, ammoSlots: 15, speedScale: 10088, score: 10276, flags: 10396 },
+      clientFlags: { noclip: 1, ufo: 2 },
+      cheatsDvar: 90624216,
+    },
   },
 
   // Served at https://vel.gg/bo1z/ since 2026-10-04, 9,618,325 bytes.
@@ -125,6 +134,19 @@ export const BUILDS = {
     // vel.gg's page layer: 1 while the map waits behind the "click to start" screen.
     introState: 148263168,
     loopbackAddressType: 2, // NA_LOOPBACK
+
+    // Fun mode panel. Read from this build's code and checked in a running game: g_entities and its stride
+    // (Cmd_God_f / SV_GameSendServerCommand), gentity fields (ClientCommand's god/demigod/notarget toggles), gclient
+    // fields (noclip/ufo toggles, ScrCmd_SetMoveSpeedScale, BG_GetAmmoPool / BG_GetAmmoClip), score (HUD-verified).
+    fun: {
+      entities: 87604176,
+      entitySize: 760,
+      ent: { client: 324, flags: 372, health: 404 },
+      entFlags: { god: 1, demigod: 2, notarget: 4 },
+      client: { ammoPools: 832, ammoClips: 952, ammoSlots: 15, speedScale: 10088, score: 10276, flags: 10396 },
+      clientFlags: { noclip: 1, ufo: 2 },
+      cheatsDvar: 86987848, // g_cheats; the panel's console commands need it on (devmap maps have it on)
+    },
   },
 };
 
