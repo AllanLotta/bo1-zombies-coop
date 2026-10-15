@@ -5,7 +5,7 @@ import { T } from "../ui/strings.js";
 import { isLoopback, normalizeRelay, pickRelay } from "../util/relay.js";
 import { cleanName, readSetting } from "../util/settings.js";
 
-export const VERSION = "2.2.0";
+export const VERSION = "2.2.1";
 export const AIM_LEVELS = 10;
 
 export function createSession(search = location.search) {
@@ -24,7 +24,6 @@ export function createSession(search = location.search) {
     relayParam: relayOverride && isLoopback(relayOverride) ? `&coopRelay=${encodeURIComponent(relayOverride)}` : "",
     // A relay named in an invite is only used after the guest agrees to switch.
     inviteRelay: normalizeRelay(params.get("relay") ?? ""),
-    uncapped: params.get("coopUncapped") !== "0",
     // The controller drives the game through the patched engine, so with it on even solo games get patched.
     controller: readSetting("controller", "1") !== "0",
     aimLevel: Math.max(0, Math.min(AIM_LEVELS - 1, Number(readSetting("aim", "4")) || 0)),
@@ -37,7 +36,6 @@ export function createSession(search = location.search) {
     engine: null,
     zone: null,
     gameSettings: null,
-    refreshRate: 60,
 
     // network
     socket: "idle",

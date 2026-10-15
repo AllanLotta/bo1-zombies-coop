@@ -1,4 +1,4 @@
-// BO1 Zombies Co-op 2.2.0 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
+// BO1 Zombies Co-op 2.2.1 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
 (() => {
   // relay/src/protocol.js
   var ROLES = Object.freeze(["host", "guest"]);
@@ -73,7 +73,8 @@
         connectionState: 14090344,
         clcPtr: 44481588,
         serverAddressPort: 24,
-        lastPacketTime: 12
+        lastPacketTime: 12,
+        codeTimeScale: 138586480
       },
       dvars: { comSvRunning: 138586336, svPaused: 138586324, clPaused: 138586328, comMaxClients: 138586176 },
       dvarValue: 24,
@@ -154,8 +155,11 @@
         // clientConnection_t*
         serverAddressPort: 24,
         // u16, inside clientConnection_t
-        lastPacketTime: 12
+        lastPacketTime: 12,
         // i32, inside clientConnection_t; 0 disables the client's timeout check
+        // f32 com_codeTimeScale: the game's slow motion, set by the "X" server command (game over slows it to 0.1).
+        // Written as 1.0 by SP_TemporaryReloadMap, which only runs where the server is.
+        codeTimeScale: 134905048
       },
       // Each entry points to a dvar_s whose current value sits at +dvarValue.
       dvars: { comSvRunning: 134904904, svPaused: 134904892, clPaused: 134904896, comMaxClients: 134904752 },
@@ -270,17 +274,6 @@
     for (let i = args.length - 3; i >= 0; i -= 1) if (args[i] === "+set" && GAME_SETTINGS.test(args[i + 1])) args.splice(i, 3);
     const safe = settings.filter(([k, v]) => typeof k === "string" && GAME_SETTINGS.test(k) && typeof v === "string" && /^[\w .-]{0,64}$/.test(v));
     insertBeforeDevmap(args, safe.flatMap(([k, v]) => ["+set", k, v]));
-  }
-  function measureRefreshRate(onResult) {
-    const times = [];
-    const step2 = (t) => {
-      times.push(t);
-      if (times.length < 30) return void requestAnimationFrame(step2);
-      const deltas = times.slice(1).map((v, i) => v - times[i]).sort((a, b) => a - b);
-      const median = deltas[deltas.length >> 1];
-      if (median > 0) onResult(Math.max(30, Math.min(240, Math.round(1e3 / median))));
-    };
-    requestAnimationFrame(step2);
   }
 
   // src/input/gamepad.js
@@ -519,6 +512,7 @@
   }
 
   // src/engine/memory.js
+  var NORMAL_SPEED = 0.999;
   var EngineMemory = class {
     constructor(Module, build) {
       this.Module = Module;
@@ -593,6 +587,13 @@
     keepClientAlive() {
       const clc = this.clientConnection();
       if (clc) this.setInt(clc + this.build.client.lastPacketTime, 0);
+    }
+    /** The game's slow-motion factor (1 = normal speed). */
+    codeTimeScale() {
+      return new Float32Array(this.buffer, this.build.client.codeTimeScale, 1)[0];
+    }
+    setCodeTimeScale(value) {
+      new Float32Array(this.buffer, this.build.client.codeTimeScale, 1)[0] = value;
     }
     /** True while a game menu (pause, options, ...) has the cursor. */
     menuOpen() {
@@ -951,7 +952,7 @@
   }
 
   // src/session/session.js
-  var VERSION = "2.2.0";
+  var VERSION = "2.2.1";
   var AIM_LEVELS = 10;
   function createSession(search = location.search) {
     const params = new URLSearchParams(search);
@@ -967,7 +968,6 @@
       relayParam: relayOverride && isLoopback(relayOverride) ? `&coopRelay=${encodeURIComponent(relayOverride)}` : "",
       // A relay named in an invite is only used after the guest agrees to switch.
       inviteRelay: normalizeRelay(params.get("relay") ?? ""),
-      uncapped: params.get("coopUncapped") !== "0",
       // The controller drives the game through the patched engine, so with it on even solo games get patched.
       controller: readSetting("controller", "1") !== "0",
       aimLevel: Math.max(0, Math.min(AIM_LEVELS - 1, Number(readSetting("aim", "4")) || 0)),
@@ -979,7 +979,6 @@
       engine: null,
       zone: null,
       gameSettings: null,
-      refreshRate: 60,
       // network
       socket: "idle",
       pump: null,
@@ -1183,6 +1182,7 @@
     const zone = devmapZone(args);
     if (zone !== info.zone) throw new Error(`hostPlaying:${MAP_NAMES[info.slug] ?? info.zone}`);
     if (Array.isArray(info.gameArgs)) applyGameSettings(args, info.gameArgs);
+    insertBeforeDevmap(args, ["+set", "kisak_web_coop", "1", "+set", "kisak_coop_players", "1"]);
     const engine = new EngineMemory(Module, session.build);
     if (!engine.mailboxesIdle()) throw new Error("unexpectedMemory");
     session.engine = engine;
@@ -1299,9 +1299,22 @@
         syncGuestPause(session, engine, screen2);
         if (session.hostState?.screen !== "playing") engine.keepClientAlive();
         stayNearHost(session);
+        restoreSpeed(session, engine);
       }
     }
   };
+  var SLOW_AFTER_HOST_MS = 1500;
+  function restoreSpeed(session, engine) {
+    if (!session.hostState?.normalSpeed || engine.codeTimeScale() >= NORMAL_SPEED) {
+      session.slowSince = null;
+      return;
+    }
+    session.slowSince ??= Date.now();
+    if (Date.now() - session.slowSince < SLOW_AFTER_HOST_MS || !engine.command("set hud_missionFailed 0")) return;
+    engine.setCodeTimeScale(1);
+    session.slowSince = null;
+    session.note("back to normal speed after the host's restart");
+  }
   function syncGuestPause(session, engine, screen2) {
     const menuOpen = engine.menuOpen() && screen2 === "playing";
     if (menuOpen !== session.menuOpen) {
@@ -1761,6 +1774,7 @@
   var KICK_AFTER_LEFT_MS = 15e3;
   var KICK_SPACING_MS = 15e3;
   var MAX_KICKS = 4;
+  var FIXED_CAMERA = 1024;
   function prepareHost(session, Module, args) {
     const engine = new EngineMemory(Module, session.build);
     if (!engine.mailboxesIdle()) throw new Error("unexpectedMemory");
@@ -1769,7 +1783,8 @@
     session.engine = engine;
     session.queues = queues;
     insertBeforeDevmap(args, ["+setqport", String(HOST_QPORT)]);
-    if (session.uncapped) insertBeforeDevmap(args, ["+set", "kisak_web_uncapped", "1", "+set", "com_maxfps", String(session.refreshRate)]);
+    insertBeforeDevmap(args, ["+set", "kisak_web_coop", "1", "+set", "kisak_coop_players", "1"]);
+    coopWait(session, 1);
     session.zone = devmapZone(args);
     session.gameSettings = gameSettings(args);
     const ports = Object.fromEntries(Object.entries(queues.seats).map(([seat, q]) => [seat, q.port]));
@@ -1805,7 +1820,8 @@
     const phase = (g) => g.state?.phase;
     updateJoinTurn(session, present, ready, now);
     for (const g of present) {
-      const state = { t: "state", to: g.seat, ready, slot: g.slot?.state ?? 0, screen: screen2, turn: session.joinTurn === g.seat };
+      const normalSpeed = !engine || engine.codeTimeScale() >= NORMAL_SPEED;
+      const state = { t: "state", to: g.seat, ready, slot: g.slot?.state ?? 0, screen: screen2, turn: session.joinTurn === g.seat, normalSpeed };
       sendWhenChanged(session, g, "state", state, now);
     }
     session.gate = screen2 === "ready" && !session.startAlone && present.some((g) => !active(g) && !["ended", "failed"].includes(phase(g)));
@@ -1815,14 +1831,22 @@
       engine.Module._KB_Input?.(7, 1, 0);
       session.note("released the start screen so players can connect");
     }
+    coopWait(session, screen2 === "playing" ? 0 : 1);
     syncPause(session, present, active, phase, screen2);
     broadcastLobby(session);
     const view2 = latestView();
-    if (present.some(active) && view2 && view2.ms !== session.sentViewMs) {
+    if (present.some(active) && view2 && view2.ms !== session.sentViewMs && !(view2.flags & FIXED_CAMERA)) {
       session.sentViewMs = view2.ms;
       send(session, { t: "pos", o: view2.origin, a: view2.angles });
     }
     for (const g of all) kickIfStale(session, g, phase(g), now);
+  }
+  function coopWait(session, mask) {
+    const wait = session.engine?.Module._KB_CoopWait;
+    if (!wait || session.coopWaitMask === mask) return;
+    wait(mask);
+    session.coopWaitMask = mask;
+    session.note(mask ? "level start held for the host's click" : "level start released");
   }
   function updateJoinTurn(session, present, ready, now) {
     const turn = session.joinTurn ? session.guests.get(session.joinTurn) : null;
@@ -3044,7 +3068,6 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
     if (session.mode) keepSinglePlayer(session.room);
     hookWasm(session);
     hookMain(session);
-    measureRefreshRate((hz) => session.refreshRate = hz);
     const card = new Card(actions(session));
     session.card = card;
     card.mount();
@@ -3079,12 +3102,19 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
     try {
       if (session.mode === "host") hostTick(session);
       else if (session.mode === "guest") guestTick(session);
+      if (session.mode) reportHidden(session);
       funTick(session);
     } catch (error) {
       session.error = error.message;
       session.note(`tick failed: ${error.stack ?? error}`);
     }
     session.card.render(view(session));
+  }
+  function reportHidden(session) {
+    const input = session.engine?.Module._KB_Input;
+    if (!input || session.reportedHidden === document.hidden) return;
+    input(8, Number(document.hidden), 0);
+    session.reportedHidden = document.hidden;
   }
   var copy = (session, text, stamp) => navigator.clipboard?.writeText(text).then(
     () => session[stamp] = Date.now(),

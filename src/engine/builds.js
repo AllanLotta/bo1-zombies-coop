@@ -49,6 +49,7 @@ export const BUILDS = {
       clcPtr: 44481588,
       serverAddressPort: 24,
       lastPacketTime: 12,
+      codeTimeScale: 138586480,
     },
     dvars: { comSvRunning: 138586336, svPaused: 138586324, clPaused: 138586328, comMaxClients: 138586176 },
     dvarValue: 24,
@@ -127,6 +128,9 @@ export const BUILDS = {
       clcPtr: 43783020, // clientConnection_t*
       serverAddressPort: 24, // u16, inside clientConnection_t
       lastPacketTime: 12, // i32, inside clientConnection_t; 0 disables the client's timeout check
+      // f32 com_codeTimeScale: the game's slow motion, set by the "X" server command (game over slows it to 0.1).
+      // Written as 1.0 by SP_TemporaryReloadMap, which only runs where the server is.
+      codeTimeScale: 134905048,
     },
     // Each entry points to a dvar_s whose current value sits at +dvarValue.
     dvars: { comSvRunning: 134904904, svPaused: 134904892, clPaused: 134904896, comMaxClients: 134904752 },

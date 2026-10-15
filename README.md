@@ -172,7 +172,11 @@ from vel.gg's own multiplayer (which it keeps switched off during a session):
    crash fixes (players in a menu, and a command flood from guests waiting in the lobby).
 2. **Gives each guest its own loopback queue on the host**, so the host's real game server sees up to three remote
    players as ordinary local clients, each with a distinct port and qport.
-3. **Pumps packets** between those queues and a WebSocket in a Worker, through a Cloudflare Durable Object per room
+3. **Starts the host with vel.gg's own co-op rules** (`kisak_web_coop`): the level script treats the game as co-op
+   rather than solo, and the round starts when the host clicks in, with everyone already connected. Game over slows
+   every client down; after the restart the extension puts guests back to normal speed, which the engine only does
+   where the server runs.
+4. **Pumps packets** between those queues and a WebSocket in a Worker, through a Cloudflare Durable Object per room
    that routes them by seat without looking inside.
 
 ## Development

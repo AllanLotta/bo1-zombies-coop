@@ -2,6 +2,9 @@
 // several threads (main, server, renderer) that share this memory with the page.
 import { SLOT } from "./builds.js";
 
+/** Code time scale at or above which the game runs at normal speed. */
+export const NORMAL_SPEED = 0.999;
+
 export class EngineMemory {
   constructor(Module, build) {
     this.Module = Module;
@@ -89,6 +92,15 @@ export class EngineMemory {
   keepClientAlive() {
     const clc = this.clientConnection();
     if (clc) this.setInt(clc + this.build.client.lastPacketTime, 0);
+  }
+
+  /** The game's slow-motion factor (1 = normal speed). */
+  codeTimeScale() {
+    return new Float32Array(this.buffer, this.build.client.codeTimeScale, 1)[0];
+  }
+
+  setCodeTimeScale(value) {
+    new Float32Array(this.buffer, this.build.client.codeTimeScale, 1)[0] = value;
   }
 
   /** True while a game menu (pause, options, ...) has the cursor. */

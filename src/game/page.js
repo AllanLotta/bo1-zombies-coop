@@ -119,16 +119,3 @@ export function applyGameSettings(args, settings) {
   const safe = settings.filter(([k, v]) => typeof k === "string" && GAME_SETTINGS.test(k) && typeof v === "string" && /^[\w .-]{0,64}$/.test(v));
   insertBeforeDevmap(args, safe.flatMap(([k, v]) => ["+set", k, v]));
 }
-
-/** The display's refresh rate, measured over 30 frames (the host caps the engine to it). */
-export function measureRefreshRate(onResult) {
-  const times = [];
-  const step = (t) => {
-    times.push(t);
-    if (times.length < 30) return void requestAnimationFrame(step);
-    const deltas = times.slice(1).map((v, i) => v - times[i]).sort((a, b) => a - b);
-    const median = deltas[deltas.length >> 1];
-    if (median > 0) onResult(Math.max(30, Math.min(240, Math.round(1000 / median))));
-  };
-  requestAnimationFrame(step);
-}

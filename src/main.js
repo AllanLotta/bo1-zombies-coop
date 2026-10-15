@@ -1,7 +1,7 @@
 // Entry point, injected into vel.gg's page before its own scripts run (manifest: run_at document_start, world MAIN).
 import { createRoomCode, normalizeRoomCode } from "../relay/src/protocol.js";
 import { CONNECTION } from "./engine/builds.js";
-import { BASE, go, keepSinglePlayer, measureRefreshRate } from "./game/page.js";
+import { BASE, go, keepSinglePlayer } from "./game/page.js";
 import { AIM_SPEEDS, Gamepad } from "./input/gamepad.js";
 import { startPump } from "./net/pump.js";
 import { guestTick, moveToHost } from "./session/guest.js";
@@ -33,7 +33,6 @@ function start() {
   // Both hooks must be in place before vel.gg loads the engine.
   hookWasm(session);
   hookMain(session);
-  measureRefreshRate((hz) => (session.refreshRate = hz));
 
   const card = new Card(actions(session));
   session.card = card;
@@ -78,12 +77,25 @@ function tick(session) {
   try {
     if (session.mode === "host") hostTick(session);
     else if (session.mode === "guest") guestTick(session);
+    if (session.mode) reportHidden(session);
     funTick(session);
   } catch (error) {
     session.error = error.message;
     session.note(`tick failed: ${error.stack ?? error}`);
   }
   session.card.render(view(session));
+}
+
+/**
+ * A hidden tab gets no animation frames, and the engine draws (and runs) its frames from them. Told the tab is hidden,
+ * it runs them from a timer on its own thread instead, as vel.gg's own co-op does: a host or guest who switches tabs
+ * keeps the game going for everyone.
+ */
+function reportHidden(session) {
+  const input = session.engine?.Module._KB_Input;
+  if (!input || session.reportedHidden === document.hidden) return;
+  input(8, Number(document.hidden), 0);
+  session.reportedHidden = document.hidden;
 }
 
 const copy = (session, text, stamp) =>

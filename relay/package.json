@@ -1,6 +1,6 @@
 {
   "name": "bo1-zombies-coop-relay",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "type": "module",
   "description": "Relay for the BO1 Zombies Co-op extension (Cloudflare Worker + Durable Objects)",

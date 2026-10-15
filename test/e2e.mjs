@@ -5,6 +5,9 @@
 // Environment: HOLD_S=<s> host waits that long in the lobby before starting; PAUSETEST=<rounds> presses Escape and T
 // on several players and checks nobody crashes; SOAK=<s> keeps playing that long; DEADLINE_MIN=<min> gives up after.
 //
+// GUEST_DELAY_S=<s> guests click into the game that long after the host (the order players report as laggy).
+// GUEST_FIRST_S=<s> guests click in first and the host that long after, guests standing still.
+//
 // EXT=<folder> tests another build of the extension (an unzipped release, say) instead of ./extension.
 //
 // Every player is a whole game engine (several GB of memory): on a 16 GB machine keep it to 3 players.
@@ -17,6 +20,8 @@ const MAP = process.argv[3] ?? "nacht";
 const RELAY = process.argv[4] ?? "http://127.0.0.1:8787";
 const OUT = process.env.OUT ?? "/tmp/bo1-e2e";
 const HOLD_MS = Number(process.env.HOLD_S ?? 0) * 1000;
+const GUEST_DELAY_MS = Number(process.env.GUEST_DELAY_S ?? 0) * 1000;
+const GUEST_FIRST_MS = process.env.GUEST_FIRST_S == null ? null : Number(process.env.GUEST_FIRST_S) * 1000;
 const DEADLINE = Date.now() + Number(process.env.DEADLINE_MIN ?? 10) * 60000;
 
 fs.rmSync(OUT, { recursive: true, force: true });
@@ -83,6 +88,16 @@ const snapshot = (player) =>
         turn: s.joinTurn,
         gate: s.gate,
         paused: s.paused ?? false,
+        ts: s.engine?.codeTimeScale ? +s.engine.codeTimeScale().toFixed(2) : null,
+        // Frames over the last 3 s and how fast game time ran against the wall clock (1 = normal, below = slow motion).
+        fps: (() => {
+          const read = (window.__e2eFrames ??= window.five?.engine?.presentReader?.());
+          const f = read?.();
+          if (!f?.intervals.length) return null;
+          const total = f.intervals.reduce((sum, v) => sum + v, 0);
+          return { avg: Math.round((1000 * f.intervals.length) / total), worstMs: Math.round(Math.max(...f.intervals)) };
+        })(),
+        pace: (() => { const v = (window.five?.views ?? []).filter((x) => x.ms > performance.now() - 3000); return v.length > 1 ? +((v.at(-1).engineMs - v[0].engineMs) / (v.at(-1).ms - v[0].ms)).toFixed(2) : null; })(),
         stats: s.stats && { in: s.stats.packetsIn, out: s.stats.packetsOut, rtt: s.stats.rtt && Math.round(s.stats.rtt), lost: s.stats.lost },
       };
     })
@@ -120,12 +135,20 @@ while (Date.now() < DEADLINE) {
   const connected = guests.filter((g) => g.s?.phase === "connected" && g.s?.connection === 10).length;
   if (connected === guests.length && !allConnectedAt) allConnectedAt = Date.now();
   const holding = allConnectedAt && Date.now() - allConnectedAt < HOLD_MS;
-  if (!hostStarted && !holding && host.s?.screen === "ready" && !host.s.gate && connected === guests.length) {
+  if (GUEST_FIRST_MS != null && !hostStarted && !holding && connected === guests.length) {
+    for (const g of guests) if (g.s?.screen === "ready") await g.page.mouse.click(150, 300);
+    if (guests.every((g) => g.s?.screen === "playing")) {
+      log(`guests are in first, the host starts in ${GUEST_FIRST_MS / 1000} s`);
+      await wait(GUEST_FIRST_MS);
+      await host.page.mouse.click(150, 300);
+      hostStarted = Date.now();
+    }
+  } else if (!hostStarted && !holding && host.s?.screen === "ready" && !host.s.gate && connected === guests.length) {
     log("everyone connected, the host starts");
     await host.page.mouse.click(150, 300);
-    hostStarted = true;
+    hostStarted = Date.now();
   }
-  if (hostStarted && host.s?.screen === "playing") {
+  if (hostStarted && host.s?.screen === "playing" && Date.now() - hostStarted >= GUEST_DELAY_MS) {
     for (const g of guests) if (g.s?.screen === "ready") await g.page.mouse.click(150, 300);
     if (guests.every((g) => g.s?.screen === "playing")) {
       allIn = true;
@@ -191,12 +214,43 @@ if (allIn) {
     }
   }
 
+  if (process.env.GAMEOVER) {
+        for (const p of players) log(p.name.padEnd(4), "before", JSON.stringify(await snapshot(p)));
+    if (process.env.DUMP) for (const p of players) await p.page.evaluate(() => window.__bo1Coop.engine.command("echo DUMP_BEFORE;dvardump;echo DUMP_END"));
+    // Everyone on 1 health and the game at triple speed: the first zombies down everybody, which ends the game.
+    await host.page.evaluate((n) => {
+      const s = window.__bo1Coop, f = s.build.fun;
+      for (let slot = 0; slot < n; slot += 1) s.engine.setInt(f.entities + slot * f.entitySize + f.ent.health, 1);
+      if (location.search.includes("fast")) s.engine.command("timescale 3");
+    }, players.length);
+    log("everyone on 1 health, timescale 3");
+  }
+  const every = process.env.GAMEOVER ? 5 : 10;
   for (let k = 0; k < Number(process.env.SOAK ?? 20); k += 1) {
     await wait(1000);
-    if (k % 10 === 9) for (const p of players) log(p.name.padEnd(4), JSON.stringify(await snapshot(p)));
+    if (process.env.RELEASE && k === Number(process.env.RELEASE)) {
+      for (const p of players) log(p.name, "introState", await p.page.evaluate(() => window.__bo1Coop.engine.int(window.__bo1Coop.build.introState)));
+      for (const g of guests) await g.page.evaluate(() => window.__bo1Coop.engine.Module._KB_Input(7, 1, 0));
+      log("guests: intro released again");
+    }
+    if (process.env.RESETMF && k === Number(process.env.RESETMF)) {
+      for (const g of guests) await g.page.evaluate(() => window.__bo1Coop.engine.command("set hud_missionFailed 0"));
+      log("guests: set hud_missionFailed 0");
+    }
+    if (process.env.GAMEOVER && k === 75) await host.page.evaluate(() => window.__bo1Coop.engine.command("timescale 1"));
+    // DIAG="dvar dvar ...": every player prints these to its console log (pN.console.log) every few seconds.
+    if (process.env.DIAG && k % every === 0) for (const p of players) await p.page.evaluate((d) => window.__bo1Coop.engine.command(d), process.env.DIAG.split(/\s+/).join(";")).catch(() => {});
+    if (k % every === every - 1) {
+      for (const p of players) log(p.name.padEnd(4), JSON.stringify(await snapshot(p)));
+      if (process.env.GAMEOVER) for (const p of players) await p.page.screenshot({ path: `${OUT}/${p.name}-${k + 1}s.png` }).catch(() => {});
+    }
   }
 }
 
+if (process.env.DUMP) {
+  for (const p of players) await p.page.evaluate(() => window.__bo1Coop.engine.command("echo DUMP_AFTER;dvardump;echo DUMP_END")).catch(() => {});
+  await wait(2000);
+}
 for (const p of players) {
   const notes = await p.page.evaluate(() => window.__bo1Coop?.log ?? []).catch(() => []);
   fs.writeFileSync(`${OUT}/${p.name}.coop.log`, notes.join("\n"));

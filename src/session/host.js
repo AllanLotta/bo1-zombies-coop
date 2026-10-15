@@ -3,7 +3,7 @@
 // what the lobby looks like.
 import { MAX_GUESTS } from "../../relay/src/protocol.js";
 import { SLOT } from "../engine/builds.js";
-import { EngineMemory } from "../engine/memory.js";
+import { EngineMemory, NORMAL_SPEED } from "../engine/memory.js";
 import { devmapZone, gameSettings, insertBeforeDevmap, latestView, screen as pageScreen } from "../game/page.js";
 import { send } from "../net/pump.js";
 import { broadcastLobby } from "./lobby.js";
@@ -21,6 +21,9 @@ const STATE_REPEAT_MS = 2000;
 const KICK_AFTER_LEFT_MS = 15000;
 const KICK_SPACING_MS = 15000;
 const MAX_KICKS = 4;
+// pm_flags bit set while the player's view is a fixed camera (the level intro, the end-of-game scoreboard). Guests
+// must not be sent there: it hangs above the map, and a guest teleported to it falls to its death.
+const FIXED_CAMERA = 0x400;
 
 /** Called right before the engine starts: sets up the guest queues and the command line. */
 export function prepareHost(session, Module, args) {
@@ -32,7 +35,12 @@ export function prepareHost(session, Module, args) {
   session.queues = queues;
 
   insertBeforeDevmap(args, ["+setqport", String(HOST_QPORT)]);
-  if (session.uncapped) insertBeforeDevmap(args, ["+set", "kisak_web_uncapped", "1", "+set", "com_maxfps", String(session.refreshRate)]);
+  // vel.gg's own co-op rules, as its multiplayer page starts the host. Without them the level script decides this is
+  // a solo game whenever the host is alone when it checks (going down then ends the game and restarts the map, Quick
+  // Revive works as in solo) and starts the round before the guests are in. kisak_coop_players 1 is vel.gg's fallback
+  // count; the start itself waits on KB_CoopWait (see coopWait), bit 0 standing for the host's start click.
+  insertBeforeDevmap(args, ["+set", "kisak_web_coop", "1", "+set", "kisak_coop_players", "1"]);
+  coopWait(session, 1);
   session.zone = devmapZone(args);
   session.gameSettings = gameSettings(args);
 
@@ -72,7 +80,9 @@ export function hostTick(session) {
 
   updateJoinTurn(session, present, ready, now);
   for (const g of present) {
-    const state = { t: "state", to: g.seat, ready, slot: g.slot?.state ?? 0, screen, turn: session.joinTurn === g.seat };
+    // normalSpeed: the host's game is out of slow motion (see restoreSpeed in guest.js).
+    const normalSpeed = !engine || engine.codeTimeScale() >= NORMAL_SPEED;
+    const state = { t: "state", to: g.seat, ready, slot: g.slot?.state ?? 0, screen, turn: session.joinTurn === g.seat, normalSpeed };
     sendWhenChanged(session, g, "state", state, now);
   }
 
@@ -87,16 +97,28 @@ export function hostTick(session) {
     session.note("released the start screen so players can connect");
   }
 
+  // The level starts once the host clicks in: everyone already connected starts together, later players watch until
+  // the next round.
+  coopWait(session, screen === "playing" ? 0 : 1);
   syncPause(session, present, active, phase, screen);
   broadcastLobby(session);
 
   const view = latestView();
-  if (present.some(active) && view && view.ms !== session.sentViewMs) {
+  if (present.some(active) && view && view.ms !== session.sentViewMs && !(view.flags & FIXED_CAMERA)) {
     session.sentViewMs = view.ms;
     send(session, { t: "pos", o: view.origin, a: view.angles });
   }
 
   for (const g of all) kickIfStale(session, g, phase(g), now);
+}
+
+/** The level script's start barrier (vel.gg's KB_CoopWait): holds while any bit of the mask is set. */
+function coopWait(session, mask) {
+  const wait = session.engine?.Module._KB_CoopWait;
+  if (!wait || session.coopWaitMask === mask) return;
+  wait(mask);
+  session.coopWaitMask = mask;
+  session.note(mask ? "level start held for the host's click" : "level start released");
 }
 
 /** One guest connects at a time: two simultaneous handshakes can be mixed up by the server. */

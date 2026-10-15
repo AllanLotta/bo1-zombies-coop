@@ -1,8 +1,8 @@
 // A guest: loads the same map in its own engine, then parks its local server and connects its client to the host's
 // server instead. The pump worker forwards the client's packets to the host and writes the host's replies back.
 import { CONNECTION, SLOT } from "../engine/builds.js";
-import { EngineMemory } from "../engine/memory.js";
-import { applyGameSettings, BASE, currentGuns, currentHorde, currentSlug, devmapZone, go, latestView, MAP_NAMES, screen as pageScreen } from "../game/page.js";
+import { EngineMemory, NORMAL_SPEED } from "../engine/memory.js";
+import { applyGameSettings, BASE, currentGuns, currentHorde, currentSlug, devmapZone, go, insertBeforeDevmap, latestView, MAP_NAMES, screen as pageScreen } from "../game/page.js";
 import { send } from "../net/pump.js";
 import { introduce } from "./messages.js";
 import { validSeat } from "./session.js";
@@ -37,6 +37,8 @@ export async function prepareGuest(session, Module, args) {
   const zone = devmapZone(args);
   if (zone !== info.zone) throw new Error(`hostPlaying:${MAP_NAMES[info.slug] ?? info.zone}`);
   if (Array.isArray(info.gameArgs)) applyGameSettings(args, info.gameArgs);
+  // The client side of vel.gg's co-op rules, as its multiplayer page starts a friend (minus its own transport).
+  insertBeforeDevmap(args, ["+set", "kisak_web_coop", "1", "+set", "kisak_coop_players", "1"]);
 
   const engine = new EngineMemory(Module, session.build);
   if (!engine.mailboxesIdle()) throw new Error("unexpectedMemory");
@@ -167,9 +169,30 @@ const STEPS = {
       // leaves, the relay tells us.
       if (session.hostState?.screen !== "playing") engine.keepClientAlive();
       stayNearHost(session);
+      restoreSpeed(session, engine);
     }
   },
 };
+
+const SLOW_AFTER_HOST_MS = 1500;
+
+/**
+ * Game over slows every client down (the server's "X" command lerps the code time scale to 0.1) and hides the HUD
+ * (hud_missionFailed). The restart that follows puts both back where the server runs, so only on the host: a guest
+ * would stay in slow motion, which also caps its frame rate at 320 x 0.1 = 32 fps. Once the host is back at normal
+ * speed and we still are not a moment later, do what the restart did there.
+ */
+function restoreSpeed(session, engine) {
+  if (!session.hostState?.normalSpeed || engine.codeTimeScale() >= NORMAL_SPEED) {
+    session.slowSince = null;
+    return;
+  }
+  session.slowSince ??= Date.now();
+  if (Date.now() - session.slowSince < SLOW_AFTER_HOST_MS || !engine.command("set hud_missionFailed 0")) return;
+  engine.setCodeTimeScale(1);
+  session.slowSince = null;
+  session.note("back to normal speed after the host's restart");
+}
 
 /** Opening our menu pauses everyone; someone else's menu pauses us. */
 function syncGuestPause(session, engine, screen) {
