@@ -91,7 +91,7 @@ const snapshot = (player) =>
 const players = [];
 for (let i = 0; i < PLAYERS; i += 1) players.push(await launch(i));
 const [host, ...guests] = players;
-await host.page.goto(`https://vel.gg/bo1z/${MAP}?coop=host&room=${ROOM}${relayParam}`);
+await host.page.goto(`https://vel.gg/bo1z/${MAP}?coop=host&coopRoom=${ROOM}${relayParam}`);
 log("room", ROOM, "players", PLAYERS, "map", MAP);
 
 // Guests open the invite one at a time, each once the previous one is in: loading several engines at once can starve

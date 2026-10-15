@@ -1,6 +1,6 @@
 // Control messages between players (everything except game packets), and the host's bookkeeping of its guests.
 import { MAX_GUESTS } from "../../relay/src/protocol.js";
-import { currentHorde, currentZone, MAP_SLUGS } from "../game/page.js";
+import { currentGuns, currentHorde, currentZone, MAP_SLUGS } from "../game/page.js";
 import { send } from "../net/pump.js";
 import { followHostMap } from "./guest.js";
 import { validSeat, VERSION } from "./session.js";
@@ -119,6 +119,7 @@ export function sendGameInfo(session, to) {
     zone,
     slug: MAP_SLUGS[zone] ?? null,
     horde: currentHorde(),
+    guns: currentGuns(),
     gameArgs: session.gameSettings,
     ...(to ? { to } : {}),
   });

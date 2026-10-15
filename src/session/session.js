@@ -5,12 +5,13 @@ import { T } from "../ui/strings.js";
 import { isLoopback, normalizeRelay, pickRelay } from "../util/relay.js";
 import { cleanName, readSetting } from "../util/settings.js";
 
-export const VERSION = "2.1.1";
+export const VERSION = "2.2.0";
 export const AIM_LEVELS = 10;
 
 export function createSession(search = location.search) {
   const params = new URLSearchParams(search);
-  const room = normalizeRoomCode(params.get("room") ?? "");
+  // "room" in links from before vel.gg had its own co-op (which reads ?room= too); keepSinglePlayer() renames it.
+  const room = normalizeRoomCode(params.get("coopRoom") ?? params.get("room") ?? "");
   const wanted = params.get("coop");
   const relayOverride = params.get("coopRelay");
 

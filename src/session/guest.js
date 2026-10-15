@@ -2,7 +2,7 @@
 // server instead. The pump worker forwards the client's packets to the host and writes the host's replies back.
 import { CONNECTION, SLOT } from "../engine/builds.js";
 import { EngineMemory } from "../engine/memory.js";
-import { applyGameSettings, BASE, currentHorde, currentSlug, devmapZone, go, latestView, MAP_NAMES, screen as pageScreen } from "../game/page.js";
+import { applyGameSettings, BASE, currentGuns, currentHorde, currentSlug, devmapZone, go, latestView, MAP_NAMES, screen as pageScreen } from "../game/page.js";
 import { send } from "../net/pump.js";
 import { introduce } from "./messages.js";
 import { validSeat } from "./session.js";
@@ -23,9 +23,10 @@ export const guestQport = (seat) => 1000 + 10000 * (seat - 1) + 1 + Math.floor(M
 export function followHostMap(session) {
   const info = session.hostInfo;
   if (!info?.slug || session.engine) return;
-  if (currentSlug() === info.slug && currentHorde() === Boolean(info.horde)) return;
+  const guns = info.guns === "cs" ? "cs" : "classic";
+  if (currentSlug() === info.slug && currentHorde() === Boolean(info.horde) && currentGuns() === guns) return;
   session.phase = "following";
-  go(`${BASE}${info.slug}?coop=join&room=${session.room}${info.horde ? "&horde=1" : ""}${session.relayParam}`);
+  go(`${BASE}${info.slug}?coop=join&coopRoom=${session.room}&mode=single&guns=${guns}${info.horde ? "&horde=1" : ""}${session.relayParam}`);
 }
 
 /** Called right before the engine starts: waits for the host's map details and copies its game settings. */

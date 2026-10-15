@@ -4,6 +4,58 @@
 // Addresses are byte offsets into the engine's linear memory; function indices count imported functions too.
 
 export const BUILDS = {
+  // Served at https://vel.gg/bo1z/ since 2026-10-14 (the release with vel.gg's own co-op), 9,902,179 bytes. Same
+  // functions and struct layouts as the build below, moved around.
+  "c025d5383791b8a3b4244713e6f3e75d958d550d3f6c83a49ac3928be2ccdb5c": {
+    functions: {
+      svFrame: [2963, "__wrap__Z8SV_Frameii"],
+      netGetLoopPacket: [4119, "NET_GetLoopPacket(netsrc_t, netadr_t*, msg_t*)"],
+      cbufAddText: [286, "Cbuf_AddText(int, char const*)"],
+      svWaitServer: [1654, "SV_WaitServer()"],
+      assertHandler: [170, "Assert_MyHandler(char const*, int, int, char const*, ...)"],
+      cachedTagUpdate: [4410, "CachedTag_UpdateTagInternal(centity_s const*, cached_client_tag_t*, unsigned int, int, bool)"],
+      comError: [179, "Com_Error(errorParm_t, char const*, ...)"],
+      clCreateCmd: [6685, "CL_CreateCmd(usercmd_s*, int)"],
+      cgScriptSndLengthNotify: [6720, "CG_ScriptSndLengthNotify(int, int)"],
+    },
+    bytePatches: [
+      {
+        fn: "clCreateCmd",
+        find: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 04 72 36 02 04",
+        replace: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 00 72 36 02 04",
+      },
+      {
+        fn: "cgScriptSndLengthNotify",
+        role: "guest",
+        find: "41 e0 d1 8a c2 00 28 02 00 2d 00 18 41 01 46 04 40",
+        replace: "41 e0 d1 8a c2 00 28 02 00 2d 00 18 41 02 46 04 40",
+      },
+    ],
+    // The words after introState are taken by vel.gg's co-op in this build. Linear memory below 1024 (where static
+    // data starts) is never used by emscripten, so the mailboxes live there.
+    mailbox: { command: 1008, freeze: 1012, inboundRing: 1016 },
+    loopback: { base: 139465312, stride: 20360, slots: 16, slotSize: 1272, dataMax: 1264, offLen: 1264, offPort: 1268, offGet: 20352, offSend: 20356 },
+    reservedPorts: [0, 1, 1773],
+    server: {
+      allowNetPackets: 146181042,
+      clientsPtr: 146047644,
+      clientStride: 544120,
+      clientState: 0,
+      clientAddrType: 32,
+      clientAddrPort: 40,
+    },
+    client: {
+      connectionState: 14090344,
+      clcPtr: 44481588,
+      serverAddressPort: 24,
+      lastPacketTime: 12,
+    },
+    dvars: { comSvRunning: 138586336, svPaused: 138586324, clPaused: 138586328, comMaxClients: 138586176 },
+    dvarValue: 24,
+    introState: 151950108,
+    loopbackAddressType: 2,
+  },
+
   // Served at https://vel.gg/bo1z/ since 2026-10-04, 9,618,325 bytes.
   "61192df377020627f52fa7e9fd28047bd53662aa46e5e3cd6e7fad0c5c35cc98": {
     // Functions the patcher edits or calls. The name is checked against the wasm name section before touching

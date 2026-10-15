@@ -50,6 +50,40 @@ export function currentSlug() {
 /** Hell mode (vel.gg calls it horde). */
 export const currentHorde = () => document.documentElement?.dataset.mode === "horde" || new URLSearchParams(location.search).get("horde") === "1";
 
+/** vel.gg's gun set: "classic" or "cs" (Counter-Strike guns, a different set of packs). */
+export const currentGuns = () => (new URLSearchParams(location.search).get("guns") === "cs" ? "cs" : "classic");
+
+/**
+ * vel.gg has its own co-op now: a map page whose URL says ?room= or mode=multi starts vel.gg's lobby instead of the
+ * plain game, and the landing's "Multiplayer" choice leads there. While this extension runs a session, every page URL
+ * is kept in single-player mode with our room under coopRoom, including the URL the landing pushes when a map is
+ * picked and the mode the landing hands over in globalThis.__kisakMode.
+ */
+export function keepSinglePlayer(room) {
+  const fix = (value) => {
+    const url = new URL(value, location.href);
+    if (url.origin !== location.origin || !`${url.pathname}/`.startsWith(BASE)) return value;
+    const params = url.searchParams;
+    params.delete("room");
+    params.set("coopRoom", room);
+    params.set("mode", "single");
+    if (params.get("guns") !== "cs") params.set("guns", "classic");
+    return url.href;
+  };
+  history.replaceState(history.state, "", fix(location.href));
+  for (const name of ["pushState", "replaceState"]) {
+    const original = history[name];
+    history[name] = function (state, title, url) {
+      return original.call(this, state, title, url == null ? url : fix(String(url)));
+    };
+  }
+  Object.defineProperty(globalThis, "__kisakMode", { configurable: true, get: () => "single", set() {} });
+  // vel.gg labels the game "Single player" in a corner; with the extension it is not.
+  const style = document.createElement("style");
+  style.textContent = "#coop-mode-label { display: none !important; }";
+  document.documentElement.append(style);
+}
+
 /** The local player's latest camera position, as vel.gg reports it. */
 export function latestView() {
   const view = window.five?.views?.at(-1);

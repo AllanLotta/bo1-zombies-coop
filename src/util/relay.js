@@ -32,5 +32,5 @@ export function pickRelay(override) {
 /** The link guests open. A custom relay travels with it, so guests can switch to it with one click. */
 export function inviteLink(session) {
   const relay = session.relay !== DEFAULT_RELAY && !session.relayParam ? `&relay=${encodeURIComponent(session.relay)}` : "";
-  return `${location.origin}${BASE}?coop=join&room=${session.room}${session.relayParam}${relay}`;
+  return `${location.origin}${BASE}?coop=join&coopRoom=${session.room}${session.relayParam}${relay}`;
 }

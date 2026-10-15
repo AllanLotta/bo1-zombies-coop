@@ -1,4 +1,4 @@
-// BO1 Zombies Co-op 2.1.1 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
+// BO1 Zombies Co-op 2.2.0 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
 (() => {
   // relay/src/protocol.js
   var ROLES = Object.freeze(["host", "guest"]);
@@ -29,6 +29,57 @@
 
   // src/engine/builds.js
   var BUILDS = {
+    // Served at https://vel.gg/bo1z/ since 2026-10-14 (the release with vel.gg's own co-op), 9,902,179 bytes. Same
+    // functions and struct layouts as the build below, moved around.
+    "c025d5383791b8a3b4244713e6f3e75d958d550d3f6c83a49ac3928be2ccdb5c": {
+      functions: {
+        svFrame: [2963, "__wrap__Z8SV_Frameii"],
+        netGetLoopPacket: [4119, "NET_GetLoopPacket(netsrc_t, netadr_t*, msg_t*)"],
+        cbufAddText: [286, "Cbuf_AddText(int, char const*)"],
+        svWaitServer: [1654, "SV_WaitServer()"],
+        assertHandler: [170, "Assert_MyHandler(char const*, int, int, char const*, ...)"],
+        cachedTagUpdate: [4410, "CachedTag_UpdateTagInternal(centity_s const*, cached_client_tag_t*, unsigned int, int, bool)"],
+        comError: [179, "Com_Error(errorParm_t, char const*, ...)"],
+        clCreateCmd: [6685, "CL_CreateCmd(usercmd_s*, int)"],
+        cgScriptSndLengthNotify: [6720, "CG_ScriptSndLengthNotify(int, int)"]
+      },
+      bytePatches: [
+        {
+          fn: "clCreateCmd",
+          find: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 04 72 36 02 04",
+          replace: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 00 72 36 02 04"
+        },
+        {
+          fn: "cgScriptSndLengthNotify",
+          role: "guest",
+          find: "41 e0 d1 8a c2 00 28 02 00 2d 00 18 41 01 46 04 40",
+          replace: "41 e0 d1 8a c2 00 28 02 00 2d 00 18 41 02 46 04 40"
+        }
+      ],
+      // The words after introState are taken by vel.gg's co-op in this build. Linear memory below 1024 (where static
+      // data starts) is never used by emscripten, so the mailboxes live there.
+      mailbox: { command: 1008, freeze: 1012, inboundRing: 1016 },
+      loopback: { base: 139465312, stride: 20360, slots: 16, slotSize: 1272, dataMax: 1264, offLen: 1264, offPort: 1268, offGet: 20352, offSend: 20356 },
+      reservedPorts: [0, 1, 1773],
+      server: {
+        allowNetPackets: 146181042,
+        clientsPtr: 146047644,
+        clientStride: 544120,
+        clientState: 0,
+        clientAddrType: 32,
+        clientAddrPort: 40
+      },
+      client: {
+        connectionState: 14090344,
+        clcPtr: 44481588,
+        serverAddressPort: 24,
+        lastPacketTime: 12
+      },
+      dvars: { comSvRunning: 138586336, svPaused: 138586324, clPaused: 138586328, comMaxClients: 138586176 },
+      dvarValue: 24,
+      introState: 151950108,
+      loopbackAddressType: 2
+    },
     // Served at https://vel.gg/bo1z/ since 2026-10-04, 9,618,325 bytes.
     "61192df377020627f52fa7e9fd28047bd53662aa46e5e3cd6e7fad0c5c35cc98": {
       // Functions the patcher edits or calls. The name is checked against the wasm name section before touching
@@ -149,6 +200,31 @@
     return match && Object.values(MAP_SLUGS).includes(match[1]) ? match[1] : null;
   }
   var currentHorde = () => document.documentElement?.dataset.mode === "horde" || new URLSearchParams(location.search).get("horde") === "1";
+  var currentGuns = () => new URLSearchParams(location.search).get("guns") === "cs" ? "cs" : "classic";
+  function keepSinglePlayer(room) {
+    const fix = (value) => {
+      const url = new URL(value, location.href);
+      if (url.origin !== location.origin || !`${url.pathname}/`.startsWith(BASE)) return value;
+      const params = url.searchParams;
+      params.delete("room");
+      params.set("coopRoom", room);
+      params.set("mode", "single");
+      if (params.get("guns") !== "cs") params.set("guns", "classic");
+      return url.href;
+    };
+    history.replaceState(history.state, "", fix(location.href));
+    for (const name of ["pushState", "replaceState"]) {
+      const original = history[name];
+      history[name] = function(state, title, url) {
+        return original.call(this, state, title, url == null ? url : fix(String(url)));
+      };
+    }
+    Object.defineProperty(globalThis, "__kisakMode", { configurable: true, get: () => "single", set() {
+    } });
+    const style = document.createElement("style");
+    style.textContent = "#coop-mode-label { display: none !important; }";
+    document.documentElement.append(style);
+  }
   function latestView() {
     const view2 = window.five?.views?.at(-1);
     return view2 && Array.isArray(view2.origin) && view2.origin.length === 3 && view2.origin.every(Number.isFinite) ? view2 : null;
@@ -843,15 +919,15 @@
   }
   function inviteLink(session) {
     const relay = session.relay !== DEFAULT_RELAY && !session.relayParam ? `&relay=${encodeURIComponent(session.relay)}` : "";
-    return `${location.origin}${BASE}?coop=join&room=${session.room}${session.relayParam}${relay}`;
+    return `${location.origin}${BASE}?coop=join&coopRoom=${session.room}${session.relayParam}${relay}`;
   }
 
   // src/session/session.js
-  var VERSION = "2.1.1";
+  var VERSION = "2.2.0";
   var AIM_LEVELS = 10;
   function createSession(search = location.search) {
     const params = new URLSearchParams(search);
-    const room = normalizeRoomCode(params.get("room") ?? "");
+    const room = normalizeRoomCode(params.get("coopRoom") ?? params.get("room") ?? "");
     const wanted = params.get("coop");
     const relayOverride = params.get("coopRelay");
     const session = {
@@ -1048,6 +1124,7 @@
       zone,
       slug: MAP_SLUGS[zone] ?? null,
       horde: currentHorde(),
+      guns: currentGuns(),
       gameArgs: session.gameSettings,
       ...to ? { to } : {}
     });
@@ -1066,9 +1143,10 @@
   function followHostMap(session) {
     const info = session.hostInfo;
     if (!info?.slug || session.engine) return;
-    if (currentSlug() === info.slug && currentHorde() === Boolean(info.horde)) return;
+    const guns = info.guns === "cs" ? "cs" : "classic";
+    if (currentSlug() === info.slug && currentHorde() === Boolean(info.horde) && currentGuns() === guns) return;
     session.phase = "following";
-    go(`${BASE}${info.slug}?coop=join&room=${session.room}${info.horde ? "&horde=1" : ""}${session.relayParam}`);
+    go(`${BASE}${info.slug}?coop=join&coopRoom=${session.room}&mode=single&guns=${guns}${info.horde ? "&horde=1" : ""}${session.relayParam}`);
   }
   async function prepareGuest(session, Module, args) {
     const info = await until(() => session.hostInfo?.zone ? session.hostInfo : null, 3e4);
@@ -2427,6 +2505,7 @@ input::placeholder { color: var(--dim); }
   function start() {
     const session = createSession();
     window.__bo1Coop = session;
+    if (session.mode) keepSinglePlayer(session.room);
     hookWasm(session);
     hookMain(session);
     measureRefreshRate((hz) => session.refreshRate = hz);
@@ -2480,10 +2559,10 @@ input::placeholder { color: var(--dim); }
   };
   function actions(session) {
     return {
-      host: () => go(`${BASE}?coop=host&room=${createRoomCode()}${session.relayParam}`),
+      host: () => go(`${BASE}?coop=host&coopRoom=${createRoomCode()}${session.relayParam}`),
       join: (text) => {
         const code = normalizeRoomCode(text);
-        if (code) go(`${BASE}?coop=join&room=${code}${session.relayParam}`);
+        if (code) go(`${BASE}?coop=join&coopRoom=${code}${session.relayParam}`);
         else session.notice = T.notRoomCode;
       },
       copyLink: () => copy(session, inviteLink(session), "copiedLinkAt"),

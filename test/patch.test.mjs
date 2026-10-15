@@ -23,6 +23,11 @@ if (!build) {
 
 // SHA-256 of the patched engine per role, recorded when the patches were verified in game.
 const EXPECTED = {
+  "c025d5383791b8a3b4244713e6f3e75d958d550d3f6c83a49ac3928be2ccdb5c": {
+    solo: "fa85057806c5c715251de4dd88c8986bda60280ecf888ca3ea36fa5fcc532e77",
+    host: "fa85057806c5c715251de4dd88c8986bda60280ecf888ca3ea36fa5fcc532e77",
+    guest: "dc432ec068cfdf6d8eb1513acbb5bea4d920a9204c7b90168d414c5e5db4d39c",
+  },
   "61192df377020627f52fa7e9fd28047bd53662aa46e5e3cd6e7fad0c5c35cc98": {
     solo: "886c6e9001bd4e27df75f45bb852511aba0714993cb48d12f0e9f2d189d700b6",
     host: "886c6e9001bd4e27df75f45bb852511aba0714993cb48d12f0e9f2d189d700b6",
