@@ -2127,13 +2127,13 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
 `;
 
   // src/ui/card.js
-  var PLAYER_COLORS = ["#f2efe9", "#5aa8ff", "#f4c542", "#63d471"];
+  var PLAYER_COLORS = ["#f2efe9", "#5aa8ff", "#f4c542", "#63d471", "#b48cff"];
   var Card = class {
     constructor(handlers) {
       this.handlers = handlers;
       this.host = document.createElement("bo1-coop-card");
       this.root = this.host.attachShadow({ mode: "closed" });
-      const mark = PLAYER_COLORS.map((c) => `<i style="background:${c}"></i>`).join("");
+      const mark = PLAYER_COLORS.slice(0, 4).map((c) => `<i style="background:${c}"></i>`).join("");
       this.root.innerHTML = `<style>${STYLE}</style><div class="card"><div class="head"><span class="mark">${mark}</span><span class="title"><b>Co-op</b><span class="tagline"></span></span><span class="chip"></span><button class="icon" data-act="collapse" title="Minimise">–</button></div><div class="body"></div></div><div class="pill"></div>`;
       this.body = this.root.querySelector(".body");
       this.chip = this.root.querySelector(".chip");

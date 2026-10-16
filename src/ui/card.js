@@ -2,15 +2,15 @@
 // turns clicks on [data-act] elements into handler calls; it knows nothing about the game itself.
 import { STYLE } from "./styles.js";
 
-// BO1 zombies scoreboard colours for players 1 to 4.
-export const PLAYER_COLORS = ["#f2efe9", "#5aa8ff", "#f4c542", "#63d471"];
+// BO1 zombies scoreboard colours for players 1 to 4; the game has no 5th, so player 5 gets a purple of our own.
+export const PLAYER_COLORS = ["#f2efe9", "#5aa8ff", "#f4c542", "#63d471", "#b48cff"];
 
 export class Card {
   constructor(handlers) {
     this.handlers = handlers;
     this.host = document.createElement("bo1-coop-card");
     this.root = this.host.attachShadow({ mode: "closed" });
-    const mark = PLAYER_COLORS.map((c) => `<i style="background:${c}"></i>`).join("");
+    const mark = PLAYER_COLORS.slice(0, 4).map((c) => `<i style="background:${c}"></i>`).join("");
     this.root.innerHTML = `<style>${STYLE}</style><div class="card"><div class="head"><span class="mark">${mark}</span><span class="title"><b>Co-op</b><span class="tagline"></span></span><span class="chip"></span><button class="icon" data-act="collapse" title="Minimise">–</button></div><div class="body"></div></div><div class="pill"></div>`;
     this.body = this.root.querySelector(".body");
     this.chip = this.root.querySelector(".chip");
