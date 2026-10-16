@@ -65,6 +65,13 @@ export function hostTick(session) {
   const engine = session.engine;
   const now = Date.now();
   const ready = Boolean(engine) && (screen === "ready" || screen === "playing");
+  // TEMP 5-player probe.
+  if (ready && !session.maxClientsProbed) {
+    session.maxClientsProbed = true;
+    const text = `5P-PROBE comMaxClients=${engine.dvar("comMaxClients")}`;
+    session.note(text);
+    console.log(text);
+  }
 
   // Match server slots to seats by the loopback port each seat sends from.
   const slots = engine && session.queues ? engine.serverSlots() : [];

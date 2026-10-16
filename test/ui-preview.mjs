@@ -30,7 +30,7 @@ const fake = ({ screen, mem = true, coop }) => {
     c.build.fun = { entities: 0, entitySize: 0, ent: { client: 0, flags: 0, health: 0 }, entFlags: {}, client: { score: 0, ammoSlots: 0 }, clientFlags: {}, cheatsDvar: 0 };
     Object.assign(c.fun, coop.fun);
   }
-  c.queues = { seats: { 1: { port: 2406 }, 2: { port: 2407 }, 3: { port: 2408 } } };
+  c.queues = { seats: { 1: { port: 2406 }, 2: { port: 2407 }, 3: { port: 2408 }, 4: { port: 2409 } } };
   for (const [k, v] of Object.entries(coop.set ?? {})) c[k] = v;
   for (const g of coop.guests ?? []) c.guests.set(g.seat, { present: true, state: null, pause: false, slot: null, leftAt: 0, kicks: 0, lastKickAt: 0, sent: {}, ...g });
   c.pump?.terminate?.();
@@ -45,9 +45,9 @@ const scenes = [
   { name: "1-solo", url: "/bo1z/", run: null },
   { name: "2-host-lobby", url: `/bo1z/?coop=host&coopRoom=${ROOM}`, run: { screen: "ready", coop: {
     set: { zone: "zombie_theater", name: "Allan", peer: true, gate: false },
-    clients: [{ slot: 1, state: 5, loopback: true, port: 2406 }, { slot: 2, state: 3, loopback: true, port: 2407 }],
-    guests: [{ seat: 1, state: { phase: "connected", name: "Rafa" } }, { seat: 2, state: { phase: "joining", name: "Bruno" } }, { seat: 3, state: { phase: "loading", name: "" } }],
-    stats: { rtt: 142, rtts: { 1: 38, 2: 142, 3: 260 }, lost: 0 } } } },
+    clients: [{ slot: 1, state: 5, loopback: true, port: 2406 }, { slot: 2, state: 3, loopback: true, port: 2407 }, { slot: 3, state: 5, loopback: true, port: 2409 }],
+    guests: [{ seat: 1, state: { phase: "connected", name: "Rafa" } }, { seat: 2, state: { phase: "joining", name: "Bruno" } }, { seat: 3, state: { phase: "loading", name: "" } }, { seat: 4, state: { phase: "connected", name: "Caio" } }],
+    stats: { rtt: 142, rtts: { 1: 38, 2: 142, 3: 260, 4: 55 }, lost: 0 } } } },
   { name: "3-host-picking", url: `/bo1z/?coop=host&coopRoom=${ROOM}`, run: { screen: "landing", mem: false, coop: { set: { name: "Allan" }, stats: { rtt: null, rtts: {} } } } },
   { name: "4-guest-joining", url: `/bo1z/?coop=join&coopRoom=${ROOM}`, run: { screen: "loading", coop: {
     set: { phase: "loading", seat: 2, peer: true, name: "Bruno", hostInfo: { slug: "kino", zone: "zombie_theater" },
