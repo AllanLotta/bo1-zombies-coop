@@ -19,7 +19,7 @@
 export const PROTOCOL_VERSION = 3;
 export const ROLES = Object.freeze(["host", "guest"]);
 export const RELAY_MESSAGE_TYPES = Object.freeze(["welcome", "peer", "error"]);
-export const MAX_GUESTS = 3;
+export const MAX_GUESTS = 4; // TEMP 5-player probe (was 3)
 
 export const MAX_TEXT_BYTES = 4096;
 export const MAX_BINARY_BYTES = 65536;
