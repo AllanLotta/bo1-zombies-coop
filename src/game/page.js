@@ -1,7 +1,9 @@
 // What the extension reads from (or does to) vel.gg's own page: the map being played, the screen it shows, the
 // arguments it starts the engine with.
 
-export const BASE = "/bo1z/";
+// The game lives under /bsz/ since 2026-10-18; it was /bo1z/ before, which now serves an empty page.
+export const BASE = "/bsz/";
+const MOVED_FROM = ["/bo1z/"];
 
 /** Engine map name -> vel.gg URL slug. */
 export const MAP_SLUGS = {
@@ -43,7 +45,7 @@ export function currentZone() {
 export function currentSlug() {
   const zone = document.documentElement?.dataset.map;
   if (zone && MAP_SLUGS[zone]) return MAP_SLUGS[zone];
-  const match = location.pathname.match(/^\/(?:bo1z\/)?([a-z]+)\/?$/);
+  const match = location.pathname.match(/^\/(?:[a-z0-9]+\/)?([a-z]+)\/?$/);
   return match && Object.values(MAP_SLUGS).includes(match[1]) ? match[1] : null;
 }
 
@@ -90,7 +92,42 @@ export function latestView() {
   return view && Array.isArray(view.origin) && view.origin.length === 3 && view.origin.every(Number.isFinite) ? view : null;
 }
 
-export const go = (url) => location.assign(url);
+export function go(url) {
+  const target = new URL(url, location.href);
+  location.assign(target.href);
+  // Only the part after # changed (a landing link opened from the landing): the page would not load again by itself.
+  if (target.pathname === location.pathname && target.search === location.search) location.reload();
+}
+
+/**
+ * Old links (invites people already sent, bookmarks) still point to where vel.gg used to be. Once such a page turns out
+ * empty, open the same page at the current address. A page that still has the game is left alone.
+ */
+/**
+ * A link to the landing with these parameters. vel.gg's landing redirects to itself forever when its URL has a query
+ * string (seen 2026-10-18), so the parameters ride after # and paramsFromHash moves them back before anything reads them.
+ */
+export const landingUrl = (params) => `${BASE.replace(/\/$/, "")}#${params.replace(/^[?&#]/, "")}`;
+
+/** See landingUrl. Runs first thing, before the session or vel.gg's own scripts look at the query. */
+export function paramsFromHash() {
+  const hash = location.hash.slice(1);
+  if (!/(^|&)coop=/.test(hash)) return;
+  const url = new URL(location.href);
+  for (const [key, value] of new URLSearchParams(hash)) url.searchParams.set(key, value);
+  url.hash = "";
+  history.replaceState(history.state, "", url.href);
+}
+
+export function followMovedSite() {
+  const old = MOVED_FROM.find((prefix) => `${location.pathname}/`.startsWith(prefix));
+  if (!old) return;
+  document.addEventListener("DOMContentLoaded", () => {
+    if (document.body?.querySelector("canvas, main")) return; // the map pages and the landing (an analytics script alone is not the game)
+    const rest = `${location.pathname}/`.slice(old.length).replace(/\/$/, "");
+    location.replace(rest ? `${BASE}${rest}${location.search}${location.hash}` : location.search ? landingUrl(location.search) : BASE);
+  });
+}
 
 // Engine command line ------------------------------------------------------------------------------------------
 

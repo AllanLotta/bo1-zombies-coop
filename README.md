@@ -5,7 +5,7 @@
 # BO1 Zombies Co-op
 
 **Play Black Ops 1 Zombies in your browser with up to 4 friends, online.**<br>
-A free Chrome extension for [vel.gg/bo1z](https://vel.gg/bo1z/): host a game, send a link, play Kino der Toten together.<br>
+A free Chrome extension for [vel.gg/bsz](https://vel.gg/bsz): host a game, send a link, play Kino der Toten together.<br>
 With controller support and a fun mode for the host (god mode, wonder weapons, infinite ammo, flying and more).
 
 [![Latest release](https://img.shields.io/github/v/release/AllanLotta/bo1-zombies-coop?label=download&color=e2552f)](https://github.com/AllanLotta/bo1-zombies-coop/releases/latest)
@@ -65,7 +65,7 @@ Step-by-step page with pictures, in English and Portuguese: **[allanlotta.github
 3. Click **Load unpacked** and pick the `bo1-zombies-coop` folder (the one with `manifest.json` inside):
 
    <img src="docs/images/install/en-2.png" width="640" alt="Load unpacked button">
-4. Done. Open [vel.gg/bo1z](https://vel.gg/bo1z/): the **Co-op** card appears in the top right corner.
+4. Done. Open [vel.gg/bsz](https://vel.gg/bsz): the **Co-op** card appears in the top right corner.
 
    <img src="docs/images/install/en-3.png" width="640" alt="The installed extension">
 
@@ -204,15 +204,17 @@ npm run check              # lint + build + engine patch test
 npm run relay:dev          # relay on http://127.0.0.1:8787
 npm run test:relay         # routing test against it
 node test/e2e.mjs 2 kino   # two real browsers playing through the local relay
+LITE=1 node test/e2e.mjs 3 kino   # same, light: one shared browser and pack cache, low quality, 30 fps
 npm run preview            # screenshots of every card state (no game loaded)
 npm run package            # dist/bo1-zombies-coop.zip (same name every release, for the download link)
 ```
 
-Each end-to-end player is a full game engine using several GB of memory: on a 16 GB machine, test with 3 at most.
+Each end-to-end player is a full game engine using several GB of memory: on a 16 GB machine, test with 3 at most, and
+prefer `LITE=1`. It also checks that every guest can walk and that nobody ends up inside another player.
 
 ## Credits
 
-The game in the browser is [vel.gg](https://vel.gg/bo1z/) by MisaDev4, built on the decompiled engine. This project
+The game in the browser is [vel.gg](https://vel.gg/bsz) by MisaDev4, built on the decompiled engine. This project
 started from invictus841's two-player co-op extension.
 
 Not affiliated with Activision or Treyarch. Call of Duty and Black Ops are trademarks of Activision Publishing.
@@ -222,7 +224,7 @@ Not affiliated with Activision or Treyarch. Call of Duty and Black Ops are trade
 ## Português
 
 **Jogue Black Ops 1 Zombies no navegador com até 4 amigos, online.** Extensão gratuita do Chrome para o
-[vel.gg/bo1z](https://vel.gg/bo1z/): um hospeda, manda o link, e todo mundo joga junto, inclusive no Kino der Toten.
+[vel.gg/bsz](https://vel.gg/bsz): um hospeda, manda o link, e todo mundo joga junto, inclusive no Kino der Toten.
 Com controle e um modo diversão para o host (imortal, armas especiais, munição infinita, voar e mais).
 
 > [!IMPORTANT]
@@ -264,7 +266,7 @@ Passo a passo com imagens: **[allanlotta.github.io/bo1-zombies-coop](https://all
 3. Clique em **Carregar sem compactação** e escolha a pasta `bo1-zombies-coop` (a que tem o `manifest.json` dentro):
 
    <img src="docs/images/install/pt-2.png" width="640" alt="Carregar sem compactação">
-4. Pronto. Abra o [vel.gg/bo1z](https://vel.gg/bo1z/): o cartão **Co-op** aparece no canto superior direito.
+4. Pronto. Abra o [vel.gg/bsz](https://vel.gg/bsz): o cartão **Co-op** aparece no canto superior direito.
 
    <img src="docs/images/install/pt-3.png" width="640" alt="A extensão instalada">
 

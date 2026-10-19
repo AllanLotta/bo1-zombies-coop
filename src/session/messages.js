@@ -66,7 +66,10 @@ function onGuestMessage(session, message) {
       if (Array.isArray(message.players)) session.lobby = message;
       break;
     case "pos":
-      if (Array.isArray(message.o) && message.o.length === 3 && message.o.every(Number.isFinite)) session.hostPos = { origin: message.o, at: Date.now() };
+      if (Array.isArray(message.o) && message.o.length === 3 && message.o.every(Number.isFinite)) {
+        session.hostPos = { origin: message.o, at: Date.now() };
+        rememberHostTrail(session, session.hostPos);
+      }
       break;
     case "error":
       session.note(`relay error ${message.code}`);
@@ -123,4 +126,15 @@ export function sendGameInfo(session, to) {
     gameArgs: session.gameSettings,
     ...(to ? { to } : {}),
   });
+}
+
+const TRAIL_STEP = 16;
+const TRAIL_MS = 20000;
+
+/** Where the host walked lately: floor a guest can be sent to without landing inside the host (see moveToHost). */
+function rememberHostTrail(session, pos) {
+  const trail = (session.hostTrail ??= []);
+  const last = trail.at(-1);
+  if (!last || Math.hypot(pos.origin[0] - last.origin[0], pos.origin[1] - last.origin[1], pos.origin[2] - last.origin[2]) >= TRAIL_STEP) trail.push(pos);
+  while (trail.length && pos.at - trail[0].at > TRAIL_MS) trail.shift();
 }

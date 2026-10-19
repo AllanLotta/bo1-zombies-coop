@@ -15,6 +15,12 @@ const HOST_POS_MAX_AGE_MS = 6000;
 const SPAWN_CHECK_MS = 2000;
 const SPAWN_TRIES = 2;
 const EYE_HEIGHT = 62;
+// Players are solid to each other: a guest put exactly where the host stands is stuck inside them, unable to move.
+// Guests go to a spot the host walked over recently, clear of the host but still close.
+const SPOT_MIN = 48;
+const SPOT_MAX = 250;
+const SPOT_MAX_DZ = 40;
+const SPOT_STEP = 16;
 
 /** Each seat has its own qport range, so guests never collide with each other or with the host (7). */
 export const guestQport = (seat) => 1000 + 10000 * (seat - 1) + 1 + Math.floor(Math.random() * 9999);
@@ -247,13 +253,40 @@ function stayNearHost(session) {
   }
 }
 
-/** Teleports our player to the host's position (also the card's "Go to the host" button). */
+/**
+ * A recent point of the host's trail near the host but not on top of them; null until the host has walked a bit.
+ * Host positions arrive spaced out, so the path between two of them is filled in (the host walked it). Points are
+ * picked at least SPOT_MIN apart and each seat takes its own, so guests do not land inside each other either.
+ */
+function spotNearHost(session) {
+  const host = session.hostPos.origin;
+  const trail = session.hostTrail ?? [];
+  const flat = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const spots = [];
+  const consider = (p) => {
+    const d = flat(p, host);
+    if (d >= SPOT_MIN && d <= SPOT_MAX && Math.abs(p[2] - host[2]) <= SPOT_MAX_DZ && spots.every((s) => flat(s, p) >= SPOT_MIN)) spots.push(p);
+  };
+  for (let i = trail.length - 1; i >= 0; i -= 1) {
+    const to = trail[i].origin;
+    consider(to);
+    const from = trail[i - 1]?.origin;
+    if (!from) continue;
+    const steps = Math.floor(flat(from, to) / SPOT_STEP);
+    for (let k = 1; k < steps; k += 1) consider(to.map((v, j) => v + ((from[j] - v) * k) / steps));
+  }
+  return spots.length ? spots[Math.min((session.seat ?? 1) - 1, spots.length - 1)] : null;
+}
+
+/** Teleports our player next to the host (also the card's "Go to the host" button). */
 export function moveToHost(session, why) {
   const engine = session.engine;
   const host = session.hostPos;
   if (!engine || session.phase !== "connected" || !host) return false;
   if (Date.now() - (session.movedAt ?? 0) < 1000) return false;
-  const target = [host.origin[0], host.origin[1], host.origin[2] + EYE_HEIGHT];
+  const spot = spotNearHost(session);
+  if (!spot) return false;
+  const target = [spot[0], spot[1], spot[2] + EYE_HEIGHT];
   if (!engine.command(`setviewpos ${target.map((v) => v.toFixed(1)).join(" ")}`)) return false;
   session.movedAt = Date.now();
   session.note(`moved next to the host (${why})`);

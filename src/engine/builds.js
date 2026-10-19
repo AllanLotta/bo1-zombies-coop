@@ -4,6 +4,68 @@
 // Addresses are byte offsets into the engine's linear memory; function indices count imported functions too.
 
 export const BUILDS = {
+  // Served at https://vel.gg/bo1z/ since about 2026-10-16 and at https://vel.gg/bsz/ since 2026-10-18, 9,908,677 bytes. A small rebuild of the one below (adds
+  // _KB_SetGraphicsQuality): same functions and struct layouts, a few indices and the static data shifted.
+  "42be1c35025afa61ed1f0fc4558ca15c45c49b37dfdc458d3ebbe30f8c958036": {
+    functions: {
+      svFrame: [2963, "__wrap__Z8SV_Frameii"],
+      netGetLoopPacket: [4119, "NET_GetLoopPacket(netsrc_t, netadr_t*, msg_t*)"],
+      cbufAddText: [286, "Cbuf_AddText(int, char const*)"],
+      svWaitServer: [1654, "SV_WaitServer()"],
+      assertHandler: [170, "Assert_MyHandler(char const*, int, int, char const*, ...)"],
+      cachedTagUpdate: [4410, "CachedTag_UpdateTagInternal(centity_s const*, cached_client_tag_t*, unsigned int, int, bool)"],
+      comError: [179, "Com_Error(errorParm_t, char const*, ...)"],
+      clCreateCmd: [6686, "CL_CreateCmd(usercmd_s*, int)"],
+      cgScriptSndLengthNotify: [6721, "CG_ScriptSndLengthNotify(int, int)"],
+    },
+    bytePatches: [
+      {
+        fn: "clCreateCmd",
+        find: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 04 72 36 02 04",
+        replace: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 00 72 36 02 04",
+      },
+      {
+        fn: "cgScriptSndLengthNotify",
+        role: "guest",
+        find: "41 d0 db 8a c2 00 28 02 00 2d 00 18 41 01 46 04 40",
+        replace: "41 d0 db 8a c2 00 28 02 00 2d 00 18 41 02 46 04 40",
+      },
+    ],
+    // The words after introState are taken by vel.gg's co-op in this build. Linear memory below 1024 (where static
+    // data starts) is never used by emscripten, so the mailboxes live there.
+    mailbox: { command: 1008, freeze: 1012, inboundRing: 1016 },
+    loopback: { base: 139466576, stride: 20360, slots: 16, slotSize: 1272, dataMax: 1264, offLen: 1264, offPort: 1268, offGet: 20352, offSend: 20356 },
+    reservedPorts: [0, 1, 1773],
+    server: {
+      allowNetPackets: 146182322,
+      clientsPtr: 146048924,
+      clientStride: 544120,
+      clientState: 0,
+      clientAddrType: 32,
+      clientAddrPort: 40,
+    },
+    client: {
+      connectionState: 14090472,
+      clcPtr: 44481716,
+      serverAddressPort: 24,
+      lastPacketTime: 12,
+      codeTimeScale: 138587744,
+    },
+    dvars: { comSvRunning: 138587600, svPaused: 138587588, clPaused: 138587592, comMaxClients: 138587440 },
+    dvarValue: 24,
+    introState: 151951500,
+    loopbackAddressType: 2,
+    fun: {
+      entities: 91240656,
+      entitySize: 760,
+      ent: { client: 324, flags: 372, health: 404 },
+      entFlags: { god: 1, demigod: 2, notarget: 4 },
+      client: { ammoPools: 832, ammoClips: 952, ammoSlots: 15, speedScale: 10088, score: 10276, flags: 10396 },
+      clientFlags: { noclip: 1, ufo: 2 },
+      cheatsDvar: 90624344,
+    },
+  },
+
   // Served at https://vel.gg/bo1z/ since 2026-10-14 (the release with vel.gg's own co-op), 9,902,179 bytes. Same
   // functions and struct layouts as the build below, moved around.
   "c025d5383791b8a3b4244713e6f3e75d958d550d3f6c83a49ac3928be2ccdb5c": {

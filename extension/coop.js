@@ -1,4 +1,4 @@
-// BO1 Zombies Co-op 2.2.1 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
+// BO1 Zombies Co-op 2.2.2 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
 (() => {
   // relay/src/protocol.js
   var ROLES = Object.freeze(["host", "guest"]);
@@ -29,6 +29,67 @@
 
   // src/engine/builds.js
   var BUILDS = {
+    // Served at https://vel.gg/bo1z/ since about 2026-10-16 and at https://vel.gg/bsz/ since 2026-10-18, 9,908,677 bytes. A small rebuild of the one below (adds
+    // _KB_SetGraphicsQuality): same functions and struct layouts, a few indices and the static data shifted.
+    "42be1c35025afa61ed1f0fc4558ca15c45c49b37dfdc458d3ebbe30f8c958036": {
+      functions: {
+        svFrame: [2963, "__wrap__Z8SV_Frameii"],
+        netGetLoopPacket: [4119, "NET_GetLoopPacket(netsrc_t, netadr_t*, msg_t*)"],
+        cbufAddText: [286, "Cbuf_AddText(int, char const*)"],
+        svWaitServer: [1654, "SV_WaitServer()"],
+        assertHandler: [170, "Assert_MyHandler(char const*, int, int, char const*, ...)"],
+        cachedTagUpdate: [4410, "CachedTag_UpdateTagInternal(centity_s const*, cached_client_tag_t*, unsigned int, int, bool)"],
+        comError: [179, "Com_Error(errorParm_t, char const*, ...)"],
+        clCreateCmd: [6686, "CL_CreateCmd(usercmd_s*, int)"],
+        cgScriptSndLengthNotify: [6721, "CG_ScriptSndLengthNotify(int, int)"]
+      },
+      bytePatches: [
+        {
+          fn: "clCreateCmd",
+          find: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 04 72 36 02 04",
+          replace: "10 ef 06 41 07 46 0d 00 20 05 20 05 28 02 04 41 00 72 36 02 04"
+        },
+        {
+          fn: "cgScriptSndLengthNotify",
+          role: "guest",
+          find: "41 d0 db 8a c2 00 28 02 00 2d 00 18 41 01 46 04 40",
+          replace: "41 d0 db 8a c2 00 28 02 00 2d 00 18 41 02 46 04 40"
+        }
+      ],
+      // The words after introState are taken by vel.gg's co-op in this build. Linear memory below 1024 (where static
+      // data starts) is never used by emscripten, so the mailboxes live there.
+      mailbox: { command: 1008, freeze: 1012, inboundRing: 1016 },
+      loopback: { base: 139466576, stride: 20360, slots: 16, slotSize: 1272, dataMax: 1264, offLen: 1264, offPort: 1268, offGet: 20352, offSend: 20356 },
+      reservedPorts: [0, 1, 1773],
+      server: {
+        allowNetPackets: 146182322,
+        clientsPtr: 146048924,
+        clientStride: 544120,
+        clientState: 0,
+        clientAddrType: 32,
+        clientAddrPort: 40
+      },
+      client: {
+        connectionState: 14090472,
+        clcPtr: 44481716,
+        serverAddressPort: 24,
+        lastPacketTime: 12,
+        codeTimeScale: 138587744
+      },
+      dvars: { comSvRunning: 138587600, svPaused: 138587588, clPaused: 138587592, comMaxClients: 138587440 },
+      dvarValue: 24,
+      introState: 151951500,
+      loopbackAddressType: 2,
+      fun: {
+        entities: 91240656,
+        entitySize: 760,
+        ent: { client: 324, flags: 372, health: 404 },
+        entFlags: { god: 1, demigod: 2, notarget: 4 },
+        client: { ammoPools: 832, ammoClips: 952, ammoSlots: 15, speedScale: 10088, score: 10276, flags: 10396 },
+        clientFlags: { noclip: 1, ufo: 2 },
+        cheatsDvar: 90624344
+      }
+    },
     // Served at https://vel.gg/bo1z/ since 2026-10-14 (the release with vel.gg's own co-op), 9,902,179 bytes. Same
     // functions and struct layouts as the build below, moved around.
     "c025d5383791b8a3b4244713e6f3e75d958d550d3f6c83a49ac3928be2ccdb5c": {
@@ -187,7 +248,8 @@
   var SLOT = Object.freeze({ free: 0, zombie: 1, reconnecting: 2, connected: 3, loading: 4, active: 5 });
 
   // src/game/page.js
-  var BASE = "/bo1z/";
+  var BASE = "/bsz/";
+  var MOVED_FROM = ["/bo1z/"];
   var MAP_SLUGS = {
     zombie_pentagon: "five",
     zombie_theater: "kino",
@@ -222,7 +284,7 @@
   function currentSlug() {
     const zone = document.documentElement?.dataset.map;
     if (zone && MAP_SLUGS[zone]) return MAP_SLUGS[zone];
-    const match = location.pathname.match(/^\/(?:bo1z\/)?([a-z]+)\/?$/);
+    const match = location.pathname.match(/^\/(?:[a-z0-9]+\/)?([a-z]+)\/?$/);
     return match && Object.values(MAP_SLUGS).includes(match[1]) ? match[1] : null;
   }
   var currentHorde = () => document.documentElement?.dataset.mode === "horde" || new URLSearchParams(location.search).get("horde") === "1";
@@ -255,7 +317,29 @@
     const view2 = window.five?.views?.at(-1);
     return view2 && Array.isArray(view2.origin) && view2.origin.length === 3 && view2.origin.every(Number.isFinite) ? view2 : null;
   }
-  var go = (url) => location.assign(url);
+  function go(url) {
+    const target = new URL(url, location.href);
+    location.assign(target.href);
+    if (target.pathname === location.pathname && target.search === location.search) location.reload();
+  }
+  var landingUrl = (params) => `${BASE.replace(/\/$/, "")}#${params.replace(/^[?&#]/, "")}`;
+  function paramsFromHash() {
+    const hash = location.hash.slice(1);
+    if (!/(^|&)coop=/.test(hash)) return;
+    const url = new URL(location.href);
+    for (const [key, value] of new URLSearchParams(hash)) url.searchParams.set(key, value);
+    url.hash = "";
+    history.replaceState(history.state, "", url.href);
+  }
+  function followMovedSite() {
+    const old = MOVED_FROM.find((prefix) => `${location.pathname}/`.startsWith(prefix));
+    if (!old) return;
+    document.addEventListener("DOMContentLoaded", () => {
+      if (document.body?.querySelector("canvas, main")) return;
+      const rest = `${location.pathname}/`.slice(old.length).replace(/\/$/, "");
+      location.replace(rest ? `${BASE}${rest}${location.search}${location.hash}` : location.search ? landingUrl(location.search) : BASE);
+    });
+  }
   var GAME_SETTINGS = /^(fs_mods|horde_[a-z_]+|kisak_mod_[a-z_]+|r_mod_[a-z_]+|r_dobjLimit|cg_mod_[a-z_]+|zinfo|noperks)$/i;
   function devmapZone(args) {
     const i = args.indexOf("+devmap");
@@ -948,11 +1032,11 @@
   }
   function inviteLink(session) {
     const relay = session.relay !== DEFAULT_RELAY && !session.relayParam ? `&relay=${encodeURIComponent(session.relay)}` : "";
-    return `${location.origin}${BASE}?coop=join&coopRoom=${session.room}${session.relayParam}${relay}`;
+    return `${location.origin}${landingUrl(`coop=join&coopRoom=${session.room}${session.relayParam}${relay}`)}`;
   }
 
   // src/session/session.js
-  var VERSION = "2.2.1";
+  var VERSION = "2.2.2";
   var AIM_LEVELS = 10;
   function createSession(search = location.search) {
     const params = new URLSearchParams(search);
@@ -1007,6 +1091,7 @@
       lobby: null,
       // the room as the host last described it
       hostPos: null,
+      hostTrail: [],
       // card
       update: null,
       // { version, url } when a newer release is out
@@ -1106,7 +1191,10 @@
         if (Array.isArray(message.players)) session.lobby = message;
         break;
       case "pos":
-        if (Array.isArray(message.o) && message.o.length === 3 && message.o.every(Number.isFinite)) session.hostPos = { origin: message.o, at: Date.now() };
+        if (Array.isArray(message.o) && message.o.length === 3 && message.o.every(Number.isFinite)) {
+          session.hostPos = { origin: message.o, at: Date.now() };
+          rememberHostTrail(session, session.hostPos);
+        }
         break;
       case "error":
         session.note(`relay error ${message.code}`);
@@ -1156,6 +1244,14 @@
       ...to ? { to } : {}
     });
   }
+  var TRAIL_STEP = 16;
+  var TRAIL_MS = 2e4;
+  function rememberHostTrail(session, pos) {
+    const trail = session.hostTrail ??= [];
+    const last = trail.at(-1);
+    if (!last || Math.hypot(pos.origin[0] - last.origin[0], pos.origin[1] - last.origin[1], pos.origin[2] - last.origin[2]) >= TRAIL_STEP) trail.push(pos);
+    while (trail.length && pos.at - trail[0].at > TRAIL_MS) trail.shift();
+  }
 
   // src/session/guest.js
   var HOST_GONE_MS = 1e4;
@@ -1166,6 +1262,10 @@
   var SPAWN_CHECK_MS = 2e3;
   var SPAWN_TRIES = 2;
   var EYE_HEIGHT = 62;
+  var SPOT_MIN = 48;
+  var SPOT_MAX = 250;
+  var SPOT_MAX_DZ = 40;
+  var SPOT_STEP = 16;
   var guestQport = (seat) => 1e3 + 1e4 * (seat - 1) + 1 + Math.floor(Math.random() * 9999);
   function followHostMap(session) {
     const info = session.hostInfo;
@@ -1363,12 +1463,33 @@
       pending.tries += 1;
     }
   }
+  function spotNearHost(session) {
+    const host = session.hostPos.origin;
+    const trail = session.hostTrail ?? [];
+    const flat = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const spots = [];
+    const consider = (p) => {
+      const d = flat(p, host);
+      if (d >= SPOT_MIN && d <= SPOT_MAX && Math.abs(p[2] - host[2]) <= SPOT_MAX_DZ && spots.every((s) => flat(s, p) >= SPOT_MIN)) spots.push(p);
+    };
+    for (let i = trail.length - 1; i >= 0; i -= 1) {
+      const to = trail[i].origin;
+      consider(to);
+      const from = trail[i - 1]?.origin;
+      if (!from) continue;
+      const steps = Math.floor(flat(from, to) / SPOT_STEP);
+      for (let k = 1; k < steps; k += 1) consider(to.map((v, j) => v + (from[j] - v) * k / steps));
+    }
+    return spots.length ? spots[Math.min((session.seat ?? 1) - 1, spots.length - 1)] : null;
+  }
   function moveToHost(session, why) {
     const engine = session.engine;
     const host = session.hostPos;
     if (!engine || session.phase !== "connected" || !host) return false;
     if (Date.now() - (session.movedAt ?? 0) < 1e3) return false;
-    const target = [host.origin[0], host.origin[1], host.origin[2] + EYE_HEIGHT];
+    const spot = spotNearHost(session);
+    if (!spot) return false;
+    const target = [spot[0], spot[1], spot[2] + EYE_HEIGHT];
     if (!engine.command(`setviewpos ${target.map((v) => v.toFixed(1)).join(" ")}`)) return false;
     session.movedAt = Date.now();
     session.note(`moved next to the host (${why})`);
@@ -3061,6 +3182,8 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
   var USAGE_REFRESH_MS = 6e5;
   if (!window.__bo1Coop) start();
   function start() {
+    followMovedSite();
+    paramsFromHash();
     const session = createSession();
     window.__bo1Coop = session;
     session.fun = createFun();
@@ -3126,10 +3249,10 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
   };
   function actions(session) {
     return {
-      host: () => go(`${BASE}?coop=host&coopRoom=${createRoomCode()}${session.relayParam}`),
+      host: () => go(landingUrl(`coop=host&coopRoom=${createRoomCode()}${session.relayParam}`)),
       join: (text) => {
         const code = normalizeRoomCode(text);
-        if (code) go(`${BASE}?coop=join&coopRoom=${code}${session.relayParam}`);
+        if (code) go(landingUrl(`coop=join&coopRoom=${code}${session.relayParam}`));
         else session.notice = T.notRoomCode;
       },
       copyLink: () => copy(session, inviteLink(session), "copiedLinkAt"),

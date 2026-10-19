@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { BUILDS } from "../src/engine/builds.js";
 import { patchEngine } from "../src/engine/patch.js";
 
-const URL = "https://vel.gg/bo1z/artifacts/KisakBlack-web.wasm";
+const URL = "https://vel.gg/bsz/artifacts/KisakBlack-web.wasm";
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 const file = join(tmpdir(), "bo1-zombies-engine.wasm");
@@ -23,6 +23,11 @@ if (!build) {
 
 // SHA-256 of the patched engine per role, recorded when the patches were verified in game.
 const EXPECTED = {
+  "42be1c35025afa61ed1f0fc4558ca15c45c49b37dfdc458d3ebbe30f8c958036": {
+    solo: "dbfc8c74e5527236cc2f2250ebfd569aaf526923bf0bb8c5db8ca70cf2bad915",
+    host: "dbfc8c74e5527236cc2f2250ebfd569aaf526923bf0bb8c5db8ca70cf2bad915",
+    guest: "eb6f78a42bc16062b3628f7aaad1b66cdcc48fcc0516544be1ef292f9cb714b0",
+  },
   "c025d5383791b8a3b4244713e6f3e75d958d550d3f6c83a49ac3928be2ccdb5c": {
     solo: "fa85057806c5c715251de4dd88c8986bda60280ecf888ca3ea36fa5fcc532e77",
     host: "fa85057806c5c715251de4dd88c8986bda60280ecf888ca3ea36fa5fcc532e77",

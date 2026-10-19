@@ -5,7 +5,7 @@ import { T } from "../ui/strings.js";
 import { isLoopback, normalizeRelay, pickRelay } from "../util/relay.js";
 import { cleanName, readSetting } from "../util/settings.js";
 
-export const VERSION = "2.2.1";
+export const VERSION = "2.2.2";
 export const AIM_LEVELS = 10;
 
 export function createSession(search = location.search) {
@@ -61,6 +61,7 @@ export function createSession(search = location.search) {
     hostState: null, // the host's view of this guest (ready, slot state, join turn)
     lobby: null, // the room as the host last described it
     hostPos: null,
+    hostTrail: [],
 
     // card
     update: null, // { version, url } when a newer release is out

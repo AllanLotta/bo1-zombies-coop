@@ -1,6 +1,6 @@
 {
   "name": "bo1-zombies-coop",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "private": true,
   "type": "module",
   "description": "Up to 4-player online co-op for Black Ops 1 Zombies in the browser (vel.gg): Chrome extension and Cloudflare relay",

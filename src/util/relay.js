@@ -1,6 +1,6 @@
 // Which relay to use. Everyone in a room must be on the same one: the default, one saved in settings, or (for local
 // testing only) a loopback address passed in the page URL.
-import { BASE } from "../game/page.js";
+import { landingUrl } from "../game/page.js";
 import { readSetting } from "./settings.js";
 
 export const DEFAULT_RELAY = "https://bo1z-coop-4p-relay.allanlotta.workers.dev";
@@ -32,5 +32,5 @@ export function pickRelay(override) {
 /** The link guests open. A custom relay travels with it, so guests can switch to it with one click. */
 export function inviteLink(session) {
   const relay = session.relay !== DEFAULT_RELAY && !session.relayParam ? `&relay=${encodeURIComponent(session.relay)}` : "";
-  return `${location.origin}${BASE}?coop=join&coopRoom=${session.room}${session.relayParam}${relay}`;
+  return `${location.origin}${landingUrl(`coop=join&coopRoom=${session.room}${session.relayParam}${relay}`)}`;
 }

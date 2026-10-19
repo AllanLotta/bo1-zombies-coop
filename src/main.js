@@ -1,7 +1,7 @@
 // Entry point, injected into vel.gg's page before its own scripts run (manifest: run_at document_start, world MAIN).
 import { createRoomCode, normalizeRoomCode } from "../relay/src/protocol.js";
 import { CONNECTION } from "./engine/builds.js";
-import { BASE, go, keepSinglePlayer } from "./game/page.js";
+import { followMovedSite, go, keepSinglePlayer, landingUrl, paramsFromHash } from "./game/page.js";
 import { AIM_SPEEDS, Gamepad } from "./input/gamepad.js";
 import { startPump } from "./net/pump.js";
 import { guestTick, moveToHost } from "./session/guest.js";
@@ -24,6 +24,8 @@ const USAGE_REFRESH_MS = 600000;
 if (!window.__bo1Coop) start();
 
 function start() {
+  followMovedSite();
+  paramsFromHash();
   const session = createSession();
   window.__bo1Coop = session;
   session.fun = createFun();
@@ -112,10 +114,10 @@ const reloadWithRelay = (relay) => {
 /** What each button and field on the card does. */
 function actions(session) {
   return {
-    host: () => go(`${BASE}?coop=host&coopRoom=${createRoomCode()}${session.relayParam}`),
+    host: () => go(landingUrl(`coop=host&coopRoom=${createRoomCode()}${session.relayParam}`)),
     join: (text) => {
       const code = normalizeRoomCode(text);
-      if (code) go(`${BASE}?coop=join&coopRoom=${code}${session.relayParam}`);
+      if (code) go(landingUrl(`coop=join&coopRoom=${code}${session.relayParam}`));
       else session.notice = T.notRoomCode;
     },
     copyLink: () => copy(session, inviteLink(session), "copiedLinkAt"),

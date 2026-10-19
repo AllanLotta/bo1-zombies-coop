@@ -60,7 +60,7 @@ for (let seat = 0; seat < 4; seat += 1) {
   const page = await context.newPage();
   const mode = seat === 0 ? "host" : "join";
   // A dead loopback relay keeps the real network out of the staged state.
-  await page.goto(`https://vel.gg/bo1z/?coop=${mode}&room=${ROOM}&coopRelay=${encodeURIComponent("http://127.0.0.1:9")}`);
+  await page.goto(`https://vel.gg/bsz#coop=${mode}&room=${ROOM}&coopRelay=${encodeURIComponent("http://127.0.0.1:9")}`);
   await page.waitForFunction(() => window.__bo1Coop?.card);
   await page.waitForTimeout(1500);
   await page.evaluate(stage, { seat, lobby, room: ROOM });
@@ -69,7 +69,7 @@ for (let seat = 0; seat < 4; seat += 1) {
 }
 
 // Four windows tiled on a dark desktop, each with a title bar naming the player.
-const titles = players.map((p) => `${p.name}${p.host ? " (host)" : ""} · vel.gg/bo1z`);
+const titles = players.map((p) => `${p.name}${p.host ? " (host)" : ""} · vel.gg/bsz`);
 const canvas = await context.newPage();
 await canvas.setViewportSize({ width: 1920, height: 1490 });
 await canvas.setContent(`<style>
