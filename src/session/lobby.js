@@ -44,11 +44,12 @@ function guestStatus(session, g, seat, playing) {
 
 /** Host: sends the lobby to every guest when it changes, and every 5 s regardless. */
 export function broadcastLobby(session) {
+  const lobby = hostRoster(session);
+  session.roster = lobby.players; // reused by the card's view this tick instead of being built twice
   if (!session.peer) {
     session.sentLobby = null;
     return;
   }
-  const lobby = hostRoster(session);
   const key = JSON.stringify(lobby);
   if (key === session.sentLobby && Date.now() - (session.sentLobbyAt ?? 0) <= 5000) return;
   session.sentLobby = key;

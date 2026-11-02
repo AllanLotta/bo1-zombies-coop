@@ -11,6 +11,12 @@ import { connectionlessCommand, QueueReader, QueueWriter } from "./queues.js";
 const POLL_MS = 1;
 const FLUSH_MS = 4;
 const INBOX_LIMIT = 512;
+// A packet the engine has not taken within this time is worthless to a real-time game: a snapshot is superseded by the
+// next one, a usercmd is too old to act on, and anything that matters (the handshake, reliable commands, the gamestate)
+// the engine's own netcode repeats until it is acknowledged. Holding old packets is harmful instead: after a game over
+// both engines stop reading for seconds (map restart), and feeding them the backlog afterwards makes the client replay
+// seconds of stale snapshots and makes the server answer every outdated usercmd with a fresh gamestate.
+const INBOX_MAX_AGE_MS = 1000;
 const PING_MS = 2000;
 
 const state = {
@@ -59,6 +65,9 @@ self.onmessage = ({ data: message }) => {
     case "inject":
       state.injecting = Boolean(message.on);
       if (message.clearInbox) state.inbox.length = 0;
+      // What waited for injection to start (a guest holds the host's first replies until its client is ready for
+      // them) starts ageing now, not when it arrived.
+      if (state.injecting) for (const item of state.inbox) item.at = performance.now();
       break;
     case "send":
       sendText(message.message);
@@ -114,11 +123,13 @@ function onBinary(data) {
   const items = hosting() ? decodeSeatPackets(data) : decodePackets(data)?.map((packet) => ({ seat: 0, packet }));
   if (!items) return;
   state.stats.framesIn += 1;
+  const at = performance.now();
   for (const item of items) {
     state.stats.packetsIn += 1;
     state.stats.bytesIn += item.packet.byteLength;
     const command = connectionlessCommand(item.packet);
     if (command && state.dropCommands.includes(command)) continue;
+    item.at = at;
     state.inbox.push(item);
   }
   if (state.inbox.length > INBOX_LIMIT) {
@@ -126,6 +137,16 @@ function onBinary(data) {
     state.inbox.splice(0, state.inbox.length - INBOX_LIMIT);
   }
   pump();
+}
+
+/** Drops what sat in the inbox for too long (see INBOX_MAX_AGE_MS). */
+function expireInbox(now) {
+  let stale = 0;
+  while (stale < state.inbox.length && now - state.inbox[stale].at > INBOX_MAX_AGE_MS) stale += 1;
+  if (stale) {
+    state.inbox.splice(0, stale);
+    state.stats.dropped += stale;
+  }
 }
 
 function onText(text) {
@@ -203,8 +224,11 @@ function pump() {
     state.stats.lost = lost;
   }
   if (state.outbox.length && now - state.lastFlush >= FLUSH_MS) flush(now);
+  if (state.injecting && state.inbox.length) expireInbox(now);
   if (state.writer && state.injecting) {
-    while (state.inbox.length && state.writer.push(state.inbox[0].packet, state.ports[state.inbox[0].seat] ?? 0)) state.inbox.shift();
+    let taken = 0;
+    while (taken < state.inbox.length && state.writer.push(state.inbox[taken].packet, state.ports[state.inbox[taken].seat] ?? 0)) taken += 1;
+    if (taken) state.inbox.splice(0, taken);
   }
 }
 
