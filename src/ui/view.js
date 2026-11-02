@@ -28,7 +28,7 @@ export function view(session) {
   if (!session.mode) return soloView(session, blocks, playing);
 
   const hosting = session.mode === "host";
-  const roster = hosting ? hostRoster(session).players : guestRoster(session);
+  const roster = hosting ? session.roster ?? hostRoster(session).players : guestRoster(session);
   const chip = hosting ? hostSection(session, blocks, roster, screen) : guestSection(session, blocks, screen);
 
   const me = hosting ? 1 : validSeat(session.seat) ? session.seat + 1 : 0;
@@ -85,7 +85,11 @@ function hostSection(session, blocks, roster, screen) {
   else if (session.gate) blocks.push({ kind: "callout", tone: "wait", text: T.gate, buttons: [{ act: "startNow", label: T.startNow }] });
   else if (screen === "ready" && !onTheWay && roster.some((p) => !p.host && p.status === "ready")) blocks.push({ kind: "callout", tone: "ok", text: T.allIn });
   else if (onTheWay && screen === "playing") blocks.push({ kind: "callout", tone: "info", text: T.latecomers });
-  if (session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+  if (session.dropped?.size) {
+    const names = [...session.dropped.values()].map((d) => d.name).filter(Boolean).join(", ");
+    blocks.push({ kind: "callout", tone: "wait", text: T.droppedHold(names), buttons: [{ act: "continueWithout", label: T.continueWithout, style: "primary" }] });
+  } else if (session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+  if (session.fun?.guarding) blocks.push({ kind: "callout", tone: "info", text: T.guarding });
   if (onSharedRelay(session) && screen !== "playing") blocks.push({ kind: "callout", tone: "info", text: T.relayPitchHost, buttons: relayButtons() });
 
   blocks.push(mapBlock(MAP_SLUGS[session.zone ?? currentZone()] ?? null, currentHorde(), T.mapSubHost));
@@ -119,7 +123,7 @@ function guestSection(session, blocks, screen) {
     if (text) blocks.push({ kind: "callout", tone: failed ? "bad" : phase === "connected" ? "ok" : "info", text, buttons: failed ? [{ act: "rejoin", label: T.rejoin, style: "primary" }] : [] });
   }
   if (session.joinedLate && ["joining", "connected"].includes(phase)) blocks.push({ kind: "callout", tone: "info", text: T.lateJoin });
-  if (phase === "connected" && session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+  if (phase === "connected" && session.paused) blocks.push({ kind: "callout", tone: "wait", text: guestPauseText(session) });
   blocks.push(mapBlock(slug, session.lobby?.horde ?? session.hostInfo?.horde, T.mapSubGuest));
 
   if (session.error) return { text: T.chip.error, tone: "bad" };
@@ -127,6 +131,13 @@ function guestSection(session, blocks, screen) {
   if (session.paused) return { text: T.chip.paused, tone: "wait" };
   if (phase === "connected") return screen === "playing" ? { text: T.chip.ingame, tone: "ok live" } : { text: T.chip.lobby, tone: "ok" };
   return { text: T.chip.joining, tone: "wait live" };
+}
+
+function guestPauseText(session) {
+  if (session.menuOpen) return T.pausedYou;
+  const who = (session.remotePauseWho ?? []).map(cleanName).filter(Boolean).join(", ");
+  if (session.remotePauseWhy === "dropped") return T.pausedDropped(who);
+  return who ? T.pausedByName(who) : T.pausedBy;
 }
 
 function guestMessage(session, phase, mapName, screen) {
@@ -185,6 +196,8 @@ function mapBlock(slug, horde, sub) {
 }
 
 function settingsSection(session, inRoom) {
+  // A closed section shows only its title: its contents are not built (nor compared) until it is opened.
+  if (!session.showSettings) return { kind: "section", title: T.settings, act: "settings", open: false, blocks: [] };
   const blocks = [{ kind: "input", label: T.yourName, field: "name", placeholder: T.namePlaceholder, act: "saveName", button: T.save, value: session.name, maxLength: 16 }];
   if (inRoom) {
     const items = [

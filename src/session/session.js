@@ -5,7 +5,7 @@ import { T } from "../ui/strings.js";
 import { isLoopback, normalizeRelay, pickRelay } from "../util/relay.js";
 import { cleanName, readSetting } from "../util/settings.js";
 
-export const VERSION = "2.2.2";
+export const VERSION = "2.3.0";
 export const AIM_LEVELS = 10;
 
 export function createSession(search = location.search) {
