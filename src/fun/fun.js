@@ -40,6 +40,39 @@ const TEXT = {
     notLoaded: "Start a map to use this.",
     cheatsOff: "This map has cheats off: the commands won't work.",
   },
+  es: {
+    title: "Modo diversión",
+    note: "Solo el anfitrión. Se aplica a todos en tu partida.",
+    pause: "Consejo: pulsa Esc en el juego para abrir esta tarjeta.",
+    flyHint: "Volar y Atravesar pasan por las paredes: apágalos con los pies en el suelo o el jugador cae fuera del mapa.",
+    players: "Jugadores",
+    all: "Todos",
+    god: "Inmortal",
+    demigod: "No muere",
+    notarget: "Invisible",
+    noclip: "Atravesar",
+    ufo: "Volar",
+    speed: "Velocidad",
+    money: "Puntos",
+    ammo: "Munición",
+    infiniteClip: "Cargador infinito",
+    infiniteStock: "Reserva infinita",
+    refill: "Rellenar a todos",
+    zombies: "Zombies",
+    oneHit: "Mueren de un golpe",
+    passive: "Os ignoran",
+    clear: "Limpiar zombies",
+    world: "Mundo",
+    timescale: "Velocidad del juego",
+    jump: "Altura del salto",
+    gravity: "Gravedad",
+    weapons: "Armas (para ti)",
+    weaponMissing: (w) => `${w} no está en este mapa.`,
+    weaponGiven: (w) => `${w} entregada.`,
+    reset: "Restablecer todo",
+    notLoaded: "Abre un mapa para usarlo.",
+    cheatsOff: "Este mapa tiene los trucos desactivados: los comandos no funcionarán.",
+  },
   pt: {
     title: "Modo diversão",
     note: "Só o host. Vale para todo mundo na sua partida.",
@@ -75,6 +108,8 @@ const TEXT = {
   },
 };
 const F = TEXT[LANG];
+const YOU = { en: "You", es: "Tú", pt: "Você" };
+const PLAYER = { en: "Player", es: "Jugador", pt: "Jogador" };
 
 const PLAYER_TOGGLES = ["god", "demigod", "notarget", "noclip", "ufo"];
 const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
@@ -134,10 +169,10 @@ const playerState = (fun, slot) => (fun.players[slot] ??= { god: false, demigod:
 
 /** Who is in the game right now: [{ slot, n, name }]. Slot 0 is always the host (or the solo player). */
 export function funPlayers(session) {
-  const players = [{ slot: 0, n: 1, name: session.name || (LANG === "pt" ? "Você" : "You") }];
+  const players = [{ slot: 0, n: 1, name: session.name || YOU[LANG] }];
   if (session.mode === "host") {
     for (const g of session.guests.values()) {
-      if (g.present && g.slot?.state === SLOT.active) players.push({ slot: g.slot.slot, n: g.seat + 1, name: g.state?.name || `${LANG === "pt" ? "Jogador" : "Player"} ${g.seat + 1}` });
+      if (g.present && g.slot?.state === SLOT.active) players.push({ slot: g.slot.slot, n: g.seat + 1, name: g.state?.name || `${PLAYER[LANG]} ${g.seat + 1}` });
     }
   }
   return players;
@@ -382,6 +417,9 @@ const fmt = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0$/,
 export function funSection(session) {
   const fun = session.fun;
   const blocks = [];
+  // Closed: only the title. The panel (per-player chips, scores read from engine memory, the weapon grid) is built
+  // once it is open, not twenty times a second while someone plays.
+  if (!fun.open) return { kind: "section", title: F.title, act: "fun", open: false, blocks };
   const a = addresses(session);
   if (!a || !["ready", "playing"].includes(pageScreen())) {
     blocks.push({ kind: "text", cls: "muted small", text: F.notLoaded });

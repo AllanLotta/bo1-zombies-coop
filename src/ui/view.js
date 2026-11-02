@@ -28,7 +28,7 @@ export function view(session) {
   if (!session.mode) return soloView(session, blocks, playing);
 
   const hosting = session.mode === "host";
-  const roster = hosting ? hostRoster(session).players : guestRoster(session);
+  const roster = hosting ? session.roster ?? hostRoster(session).players : guestRoster(session);
   const chip = hosting ? hostSection(session, blocks, roster, screen) : guestSection(session, blocks, screen);
 
   const me = hosting ? 1 : validSeat(session.seat) ? session.seat + 1 : 0;
@@ -185,6 +185,8 @@ function mapBlock(slug, horde, sub) {
 }
 
 function settingsSection(session, inRoom) {
+  // A closed section shows only its title: its contents are not built (nor compared) until it is opened.
+  if (!session.showSettings) return { kind: "section", title: T.settings, act: "settings", open: false, blocks: [] };
   const blocks = [{ kind: "input", label: T.yourName, field: "name", placeholder: T.namePlaceholder, act: "saveName", button: T.save, value: session.name, maxLength: 16 }];
   if (inRoom) {
     const items = [

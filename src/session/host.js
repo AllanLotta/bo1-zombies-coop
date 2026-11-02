@@ -24,6 +24,9 @@ const MAX_KICKS = 4;
 // pm_flags bit set while the player's view is a fixed camera (the level intro, the end-of-game scoreboard). Guests
 // must not be sent there: it hangs above the map, and a guest teleported to it falls to its death.
 const FIXED_CAMERA = 0x400;
+// How often guests hear where the host is. They only use it to spawn next to the host (see stayNearHost in guest.js),
+// so 10 times a second is plenty, and it keeps the relay's text traffic (which counts against its quota) low.
+const POS_EVERY_MS = 100;
 
 /** Called right before the engine starts: sets up the guest queues and the command line. */
 export function prepareHost(session, Module, args) {
@@ -104,8 +107,9 @@ export function hostTick(session) {
   broadcastLobby(session);
 
   const view = latestView();
-  if (present.some(active) && view && view.ms !== session.sentViewMs && !(view.flags & FIXED_CAMERA)) {
+  if (present.some(active) && view && view.ms !== session.sentViewMs && now - (session.sentPosAt ?? 0) >= POS_EVERY_MS && !(view.flags & FIXED_CAMERA)) {
     session.sentViewMs = view.ms;
+    session.sentPosAt = now;
     send(session, { t: "pos", o: view.origin, a: view.angles });
   }
 

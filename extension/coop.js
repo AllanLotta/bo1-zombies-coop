@@ -1,4 +1,4 @@
-// BO1 Zombies Co-op 2.2.2 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
+// BO1 Zombies Co-op 2.3.0 for vel.gg. Built from src/ with scripts/build.mjs; edit the sources, not this file.
 (() => {
   // relay/src/protocol.js
   var ROLES = Object.freeze(["host", "guest"]);
@@ -580,7 +580,7 @@
 
   // src/net/pump.js
   function startPump(session, onControl2) {
-    const url = URL.createObjectURL(new Blob(['(() => {\n  // relay/src/protocol.js\n  var PROTOCOL_VERSION = 3;\n  var ROLES = Object.freeze(["host", "guest"]);\n  var RELAY_MESSAGE_TYPES = Object.freeze(["welcome", "peer", "error"]);\n  var MAX_GUESTS = 3;\n  var MAX_TEXT_BYTES = 4096;\n  var MAX_BINARY_BYTES = 65536;\n  var MAX_PACKET_BYTES = 1264;\n  function relaySocketUrl(relayBase, room, role, guestId) {\n    const url = new URL(relayBase);\n    url.protocol = url.protocol === "http:" || url.protocol === "ws:" ? "ws:" : "wss:";\n    url.pathname = `/v1/rooms/${encodeURIComponent(room)}`;\n    url.search = `?role=${role}&v=${PROTOCOL_VERSION}${role === "guest" ? `&id=${guestId}` : ""}`;\n    return url.toString();\n  }\n  var BATCH_VERSION = 1;\n  var KIND_PACKETS = 1;\n  var KIND_SEAT_PACKETS = 2;\n  function writeBatch(kind, items, seatOf, packetOf) {\n    const header = kind === KIND_SEAT_PACKETS ? 3 : 2;\n    let size = 4;\n    for (const item of items) size += header + packetOf(item).byteLength;\n    if (items.length > 65535 || size > MAX_BINARY_BYTES) throw new RangeError("packet batch too large");\n    const out = new Uint8Array(size);\n    const view = new DataView(out.buffer);\n    out[0] = BATCH_VERSION;\n    out[1] = kind;\n    view.setUint16(2, items.length, true);\n    let at = 4;\n    for (const item of items) {\n      const packet = packetOf(item);\n      if (packet.byteLength > MAX_PACKET_BYTES) throw new RangeError("packet too large");\n      if (kind === KIND_SEAT_PACKETS) out[at++] = seatOf(item);\n      view.setUint16(at, packet.byteLength, true);\n      out.set(packet, at + 2);\n      at += 2 + packet.byteLength;\n    }\n    return out;\n  }\n  function readBatch(kind, data) {\n    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);\n    if (bytes.byteLength < 4 || bytes[0] !== BATCH_VERSION || bytes[1] !== kind) return null;\n    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);\n    const count = view.getUint16(2, true);\n    const items = [];\n    let at = 4;\n    for (let i = 0; i < count; i += 1) {\n      let seat = 0;\n      if (kind === KIND_SEAT_PACKETS) {\n        if (at + 1 > bytes.byteLength) return null;\n        seat = bytes[at++];\n        if (seat < 1 || seat > MAX_GUESTS) return null;\n      }\n      if (at + 2 > bytes.byteLength) return null;\n      const length = view.getUint16(at, true);\n      at += 2;\n      if (length > MAX_PACKET_BYTES || at + length > bytes.byteLength) return null;\n      items.push({ seat, packet: bytes.subarray(at, at + length) });\n      at += length;\n    }\n    return at === bytes.byteLength ? items : null;\n  }\n  var encodePackets = (packets) => writeBatch(KIND_PACKETS, packets, null, (p) => p);\n  var decodePackets = (data) => readBatch(KIND_PACKETS, data)?.map((item) => item.packet) ?? null;\n  var encodeSeatPackets = (items) => writeBatch(KIND_SEAT_PACKETS, items, (i) => i.seat, (i) => i.packet);\n  var decodeSeatPackets = (data) => readBatch(KIND_SEAT_PACKETS, data);\n  function parseControl(text) {\n    if (typeof text !== "string" || text.length > MAX_TEXT_BYTES) return null;\n    let value;\n    try {\n      value = JSON.parse(text);\n    } catch {\n      return null;\n    }\n    const ok = value && typeof value === "object" && !Array.isArray(value) && typeof value.t === "string" && value.t.length <= 32;\n    return ok ? value : null;\n  }\n\n  // src/net/queues.js\n  var QueueReader = class {\n    constructor(buffer, loopback, base, { consume = false } = {}) {\n      this.i32 = new Int32Array(buffer);\n      this.u8 = new Uint8Array(buffer);\n      this.lb = loopback;\n      this.base = base;\n      this.readIndex = base + loopback.offGet >> 2;\n      this.writeIndex = base + loopback.offSend >> 2;\n      this.consume = consume;\n      this.cursor = Atomics.load(this.i32, this.writeIndex);\n      this.lost = 0;\n    }\n    /** Forgets everything written so far. */\n    skip() {\n      this.cursor = Atomics.load(this.i32, this.writeIndex);\n      if (this.consume) Atomics.store(this.i32, this.readIndex, this.cursor);\n    }\n    /** New packets since the last call. Slots the engine overwrote before we got to them count as lost. */\n    poll(out = []) {\n      const { slots, slotSize, offLen, dataMax } = this.lb;\n      let written = Atomics.load(this.i32, this.writeIndex);\n      if (written - this.cursor > slots - 1) {\n        this.lost += written - (slots - 1) - this.cursor;\n        this.cursor = written - (slots - 1);\n      }\n      while (this.cursor < written) {\n        const slot = this.base + (this.cursor & slots - 1) * slotSize;\n        const length = this.i32[slot + offLen >> 2];\n        const packet = length > 0 && length <= dataMax ? this.u8.slice(slot, slot + length) : null;\n        written = Atomics.load(this.i32, this.writeIndex);\n        if (written - this.cursor > slots - 1) this.lost += 1;\n        else if (packet) out.push(packet);\n        this.cursor += 1;\n      }\n      if (this.consume) Atomics.store(this.i32, this.readIndex, this.cursor);\n      return out;\n    }\n  };\n  var QueueWriter = class {\n    constructor(buffer, loopback, base) {\n      this.i32 = new Int32Array(buffer);\n      this.u8 = new Uint8Array(buffer);\n      this.lb = loopback;\n      this.base = base;\n      this.readIndex = base + loopback.offGet >> 2;\n      this.writeIndex = base + loopback.offSend >> 2;\n    }\n    hasRoom() {\n      return Atomics.load(this.i32, this.writeIndex) - Atomics.load(this.i32, this.readIndex) < this.lb.slots - 1;\n    }\n    /** False, without writing, when the engine has not caught up yet; the caller retries later. */\n    push(packet, port) {\n      const { slots, slotSize, offLen, offPort, dataMax } = this.lb;\n      if (packet.byteLength === 0 || packet.byteLength > dataMax) return true;\n      if (!this.hasRoom()) return false;\n      const written = Atomics.load(this.i32, this.writeIndex);\n      const slot = this.base + (written & slots - 1) * slotSize;\n      this.u8.set(packet, slot);\n      Atomics.store(this.i32, slot + offLen >> 2, packet.byteLength);\n      Atomics.store(this.i32, slot + offPort >> 2, port);\n      Atomics.add(this.i32, this.writeIndex, 1);\n      return true;\n    }\n  };\n  function connectionlessCommand(packet) {\n    if (packet.byteLength < 5 || packet[0] !== 255 || packet[1] !== 255 || packet[2] !== 255 || packet[3] !== 255) return null;\n    let end = 4;\n    while (end < packet.byteLength && end < 64 && packet[end] !== 0 && packet[end] !== 32 && packet[end] !== 10) end += 1;\n    return String.fromCharCode(...packet.subarray(4, end));\n  }\n\n  // src/net/pump-worker.js\n  var POLL_MS = 1;\n  var FLUSH_MS = 4;\n  var INBOX_LIMIT = 512;\n  var PING_MS = 2e3;\n  var state = {\n    role: null,\n    url: null,\n    socket: null,\n    closed: false,\n    retries: 0,\n    readers: [],\n    writer: null,\n    ports: {},\n    reading: false,\n    injecting: false,\n    dropUntilConnect: false,\n    dropCommands: [],\n    inbox: [],\n    outbox: [],\n    lastFlush: 0,\n    looping: false,\n    stats: { packetsOut: 0, packetsIn: 0, bytesOut: 0, bytesIn: 0, framesOut: 0, framesIn: 0, dropped: 0, lost: 0, rtt: null, rtts: {} }\n  };\n  var hosting = () => state.role === "host";\n  var post = (message) => self.postMessage(message);\n  self.onmessage = ({ data: message }) => {\n    switch (message.type) {\n      case "connect":\n        state.role = message.role;\n        state.url = relaySocketUrl(message.relay, message.room, message.role, message.guestId);\n        open();\n        loop();\n        break;\n      case "attach":\n        state.readers = message.reads.map(({ seat, base }) => ({ seat, queue: new QueueReader(message.buffer, message.loopback, base, { consume: true }) }));\n        state.writer = new QueueWriter(message.buffer, message.loopback, message.writeBase);\n        state.ports = message.ports;\n        state.reading = Boolean(message.reading);\n        state.injecting = Boolean(message.injecting);\n        state.dropCommands = message.dropCommands ?? [];\n        break;\n      case "read":\n        for (const { queue } of state.readers) queue.skip();\n        state.dropUntilConnect = Boolean(message.dropUntilConnect);\n        state.reading = true;\n        break;\n      case "inject":\n        state.injecting = Boolean(message.on);\n        if (message.clearInbox) state.inbox.length = 0;\n        break;\n      case "send":\n        sendText(message.message);\n        break;\n      case "close":\n        state.closed = true;\n        try {\n          state.socket?.close(1e3, "bye");\n        } catch {\n        }\n        break;\n    }\n  };\n  function open() {\n    if (state.closed) return;\n    let socket;\n    try {\n      socket = new WebSocket(state.url);\n    } catch (error) {\n      post({ type: "socket", state: "error", reason: String(error?.message ?? error) });\n      retry();\n      return;\n    }\n    socket.binaryType = "arraybuffer";\n    state.socket = socket;\n    post({ type: "socket", state: "connecting" });\n    socket.onopen = () => {\n      state.retries = 0;\n      post({ type: "socket", state: "open" });\n    };\n    socket.onmessage = ({ data }) => typeof data === "string" ? onText(data) : onBinary(data);\n    socket.onclose = (event) => {\n      if (state.socket === socket) state.socket = null;\n      post({ type: "socket", state: "closed", code: event.code, reason: event.reason });\n      if (event.code === 4001 || event.code === 4004) state.closed = true;\n      else if (event.code === 4005) setTimeout(open, 6e4);\n      else retry();\n    };\n    socket.onerror = () => {\n    };\n  }\n  function retry() {\n    if (state.closed) return;\n    setTimeout(open, Math.min(5e3, 250 * 2 ** state.retries));\n    state.retries += 1;\n  }\n  function onBinary(data) {\n    const items = hosting() ? decodeSeatPackets(data) : decodePackets(data)?.map((packet) => ({ seat: 0, packet }));\n    if (!items) return;\n    state.stats.framesIn += 1;\n    for (const item of items) {\n      state.stats.packetsIn += 1;\n      state.stats.bytesIn += item.packet.byteLength;\n      const command = connectionlessCommand(item.packet);\n      if (command && state.dropCommands.includes(command)) continue;\n      state.inbox.push(item);\n    }\n    if (state.inbox.length > INBOX_LIMIT) {\n      state.stats.dropped += state.inbox.length - INBOX_LIMIT;\n      state.inbox.splice(0, state.inbox.length - INBOX_LIMIT);\n    }\n    pump();\n  }\n  function onText(text) {\n    const message = parseControl(text);\n    if (!message) return;\n    if (message.t === "ping") {\n      sendText(hosting() ? { t: "pong", ts: message.ts, to: message.from } : { t: "pong", ts: message.ts });\n    } else if (message.t === "pong") {\n      if (typeof message.ts !== "number") return;\n      const rtt = Math.max(0, performance.now() - message.ts);\n      if (hosting()) {\n        if (Number.isInteger(message.from)) state.stats.rtts[message.from] = rtt;\n        state.stats.rtt = Math.max(0, ...Object.values(state.stats.rtts));\n      } else {\n        state.stats.rtt = rtt;\n      }\n    } else {\n      post({ type: "control", message });\n    }\n  }\n  function sendText(message) {\n    if (state.socket?.readyState !== WebSocket.OPEN) return false;\n    state.socket.send(JSON.stringify(message));\n    return true;\n  }\n  function flush(now) {\n    if (!state.outbox.length) return;\n    const socket = state.socket;\n    if (socket?.readyState !== WebSocket.OPEN) {\n      state.stats.dropped += state.outbox.length;\n    } else {\n      const seats = hosting();\n      const perPacket = seats ? 3 : 2;\n      let batch = [];\n      let size = 4;\n      const send = () => {\n        if (!batch.length) return;\n        socket.send(seats ? encodeSeatPackets(batch) : encodePackets(batch.map((item) => item.packet)));\n        state.stats.framesOut += 1;\n        batch = [];\n        size = 4;\n      };\n      for (const item of state.outbox) {\n        const bytes = perPacket + item.packet.byteLength;\n        if (size + bytes > MAX_BINARY_BYTES) send();\n        batch.push(item);\n        size += bytes;\n        state.stats.packetsOut += 1;\n        state.stats.bytesOut += item.packet.byteLength;\n      }\n      send();\n    }\n    state.outbox.length = 0;\n    state.lastFlush = now;\n  }\n  function pump() {\n    const now = performance.now();\n    if (state.reading) {\n      let lost = 0;\n      for (const { seat, queue } of state.readers) {\n        let packets = queue.poll([]);\n        lost += queue.lost;\n        if (state.dropUntilConnect && packets.length) {\n          const first = packets.findIndex((packet) => connectionlessCommand(packet) === "connect");\n          packets = first < 0 ? [] : packets.slice(first);\n          if (first >= 0) state.dropUntilConnect = false;\n        }\n        for (const packet of packets) state.outbox.push({ seat, packet });\n      }\n      state.stats.lost = lost;\n    }\n    if (state.outbox.length && now - state.lastFlush >= FLUSH_MS) flush(now);\n    if (state.writer && state.injecting) {\n      while (state.inbox.length && state.writer.push(state.inbox[0].packet, state.ports[state.inbox[0].seat] ?? 0)) state.inbox.shift();\n    }\n  }\n  async function loop() {\n    if (state.looping) return;\n    state.looping = true;\n    const tick = new Int32Array(new SharedArrayBuffer(4));\n    let lastPing = 0;\n    let lastStats = 0;\n    while (!state.closed) {\n      pump();\n      const now = performance.now();\n      if (now - lastPing >= PING_MS) {\n        lastPing = now;\n        sendText({ t: "ping", ts: now });\n      }\n      if (now - lastStats >= 1e3) {\n        lastStats = now;\n        post({ type: "stats", stats: { ...state.stats, rtts: { ...state.stats.rtts }, inbox: state.inbox.length } });\n      }\n      const wait = Atomics.waitAsync ? Atomics.waitAsync(tick, 0, 0, POLL_MS) : null;\n      if (wait?.async) await wait.value;\n      else await new Promise((resolve) => setTimeout(resolve, POLL_MS));\n    }\n  }\n})();\n'], { type: "text/javascript" }));
+    const url = URL.createObjectURL(new Blob(['(() => {\n  // relay/src/protocol.js\n  var PROTOCOL_VERSION = 3;\n  var ROLES = Object.freeze(["host", "guest"]);\n  var RELAY_MESSAGE_TYPES = Object.freeze(["welcome", "peer", "error"]);\n  var MAX_GUESTS = 3;\n  var MAX_TEXT_BYTES = 4096;\n  var MAX_BINARY_BYTES = 65536;\n  var MAX_PACKET_BYTES = 1264;\n  function relaySocketUrl(relayBase, room, role, guestId) {\n    const url = new URL(relayBase);\n    url.protocol = url.protocol === "http:" || url.protocol === "ws:" ? "ws:" : "wss:";\n    url.pathname = `/v1/rooms/${encodeURIComponent(room)}`;\n    url.search = `?role=${role}&v=${PROTOCOL_VERSION}${role === "guest" ? `&id=${guestId}` : ""}`;\n    return url.toString();\n  }\n  var BATCH_VERSION = 1;\n  var KIND_PACKETS = 1;\n  var KIND_SEAT_PACKETS = 2;\n  function writeBatch(kind, items, seatOf, packetOf) {\n    const header = kind === KIND_SEAT_PACKETS ? 3 : 2;\n    let size = 4;\n    for (const item of items) size += header + packetOf(item).byteLength;\n    if (items.length > 65535 || size > MAX_BINARY_BYTES) throw new RangeError("packet batch too large");\n    const out = new Uint8Array(size);\n    const view = new DataView(out.buffer);\n    out[0] = BATCH_VERSION;\n    out[1] = kind;\n    view.setUint16(2, items.length, true);\n    let at = 4;\n    for (const item of items) {\n      const packet = packetOf(item);\n      if (packet.byteLength > MAX_PACKET_BYTES) throw new RangeError("packet too large");\n      if (kind === KIND_SEAT_PACKETS) out[at++] = seatOf(item);\n      view.setUint16(at, packet.byteLength, true);\n      out.set(packet, at + 2);\n      at += 2 + packet.byteLength;\n    }\n    return out;\n  }\n  function readBatch(kind, data) {\n    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);\n    if (bytes.byteLength < 4 || bytes[0] !== BATCH_VERSION || bytes[1] !== kind) return null;\n    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);\n    const count = view.getUint16(2, true);\n    const items = [];\n    let at = 4;\n    for (let i = 0; i < count; i += 1) {\n      let seat = 0;\n      if (kind === KIND_SEAT_PACKETS) {\n        if (at + 1 > bytes.byteLength) return null;\n        seat = bytes[at++];\n        if (seat < 1 || seat > MAX_GUESTS) return null;\n      }\n      if (at + 2 > bytes.byteLength) return null;\n      const length = view.getUint16(at, true);\n      at += 2;\n      if (length > MAX_PACKET_BYTES || at + length > bytes.byteLength) return null;\n      items.push({ seat, packet: bytes.subarray(at, at + length) });\n      at += length;\n    }\n    return at === bytes.byteLength ? items : null;\n  }\n  var encodePackets = (packets) => writeBatch(KIND_PACKETS, packets, null, (p) => p);\n  var decodePackets = (data) => readBatch(KIND_PACKETS, data)?.map((item) => item.packet) ?? null;\n  var encodeSeatPackets = (items) => writeBatch(KIND_SEAT_PACKETS, items, (i) => i.seat, (i) => i.packet);\n  var decodeSeatPackets = (data) => readBatch(KIND_SEAT_PACKETS, data);\n  function parseControl(text) {\n    if (typeof text !== "string" || text.length > MAX_TEXT_BYTES) return null;\n    let value;\n    try {\n      value = JSON.parse(text);\n    } catch {\n      return null;\n    }\n    const ok = value && typeof value === "object" && !Array.isArray(value) && typeof value.t === "string" && value.t.length <= 32;\n    return ok ? value : null;\n  }\n\n  // src/net/queues.js\n  var QueueReader = class {\n    constructor(buffer, loopback, base, { consume = false } = {}) {\n      this.i32 = new Int32Array(buffer);\n      this.u8 = new Uint8Array(buffer);\n      this.lb = loopback;\n      this.base = base;\n      this.readIndex = base + loopback.offGet >> 2;\n      this.writeIndex = base + loopback.offSend >> 2;\n      this.consume = consume;\n      this.cursor = Atomics.load(this.i32, this.writeIndex);\n      this.lost = 0;\n    }\n    /** Forgets everything written so far. */\n    skip() {\n      this.cursor = Atomics.load(this.i32, this.writeIndex);\n      if (this.consume) Atomics.store(this.i32, this.readIndex, this.cursor);\n    }\n    /** New packets since the last call. Slots the engine overwrote before we got to them count as lost. */\n    poll(out = []) {\n      const { slots, slotSize, offLen, dataMax } = this.lb;\n      let written = Atomics.load(this.i32, this.writeIndex);\n      if (written - this.cursor > slots - 1) {\n        this.lost += written - (slots - 1) - this.cursor;\n        this.cursor = written - (slots - 1);\n      }\n      while (this.cursor < written) {\n        const slot = this.base + (this.cursor & slots - 1) * slotSize;\n        const length = this.i32[slot + offLen >> 2];\n        const packet = length > 0 && length <= dataMax ? this.u8.slice(slot, slot + length) : null;\n        written = Atomics.load(this.i32, this.writeIndex);\n        if (written - this.cursor > slots - 1) this.lost += 1;\n        else if (packet) out.push(packet);\n        this.cursor += 1;\n      }\n      if (this.consume) Atomics.store(this.i32, this.readIndex, this.cursor);\n      return out;\n    }\n  };\n  var QueueWriter = class {\n    constructor(buffer, loopback, base) {\n      this.i32 = new Int32Array(buffer);\n      this.u8 = new Uint8Array(buffer);\n      this.lb = loopback;\n      this.base = base;\n      this.readIndex = base + loopback.offGet >> 2;\n      this.writeIndex = base + loopback.offSend >> 2;\n    }\n    hasRoom() {\n      return Atomics.load(this.i32, this.writeIndex) - Atomics.load(this.i32, this.readIndex) < this.lb.slots - 1;\n    }\n    /** False, without writing, when the engine has not caught up yet; the caller retries later. */\n    push(packet, port) {\n      const { slots, slotSize, offLen, offPort, dataMax } = this.lb;\n      if (packet.byteLength === 0 || packet.byteLength > dataMax) return true;\n      if (!this.hasRoom()) return false;\n      const written = Atomics.load(this.i32, this.writeIndex);\n      const slot = this.base + (written & slots - 1) * slotSize;\n      this.u8.set(packet, slot);\n      Atomics.store(this.i32, slot + offLen >> 2, packet.byteLength);\n      Atomics.store(this.i32, slot + offPort >> 2, port);\n      Atomics.add(this.i32, this.writeIndex, 1);\n      return true;\n    }\n  };\n  function connectionlessCommand(packet) {\n    if (packet.byteLength < 5 || packet[0] !== 255 || packet[1] !== 255 || packet[2] !== 255 || packet[3] !== 255) return null;\n    let end = 4;\n    while (end < packet.byteLength && end < 64 && packet[end] !== 0 && packet[end] !== 32 && packet[end] !== 10) end += 1;\n    return String.fromCharCode(...packet.subarray(4, end));\n  }\n\n  // src/net/pump-worker.js\n  var POLL_MS = 1;\n  var FLUSH_MS = 4;\n  var INBOX_LIMIT = 512;\n  var INBOX_MAX_AGE_MS = 1e3;\n  var PING_MS = 2e3;\n  var state = {\n    role: null,\n    url: null,\n    socket: null,\n    closed: false,\n    retries: 0,\n    readers: [],\n    writer: null,\n    ports: {},\n    reading: false,\n    injecting: false,\n    dropUntilConnect: false,\n    dropCommands: [],\n    inbox: [],\n    outbox: [],\n    lastFlush: 0,\n    looping: false,\n    stats: { packetsOut: 0, packetsIn: 0, bytesOut: 0, bytesIn: 0, framesOut: 0, framesIn: 0, dropped: 0, lost: 0, rtt: null, rtts: {} }\n  };\n  var hosting = () => state.role === "host";\n  var post = (message) => self.postMessage(message);\n  self.onmessage = ({ data: message }) => {\n    switch (message.type) {\n      case "connect":\n        state.role = message.role;\n        state.url = relaySocketUrl(message.relay, message.room, message.role, message.guestId);\n        open();\n        loop();\n        break;\n      case "attach":\n        state.readers = message.reads.map(({ seat, base }) => ({ seat, queue: new QueueReader(message.buffer, message.loopback, base, { consume: true }) }));\n        state.writer = new QueueWriter(message.buffer, message.loopback, message.writeBase);\n        state.ports = message.ports;\n        state.reading = Boolean(message.reading);\n        state.injecting = Boolean(message.injecting);\n        state.dropCommands = message.dropCommands ?? [];\n        break;\n      case "read":\n        for (const { queue } of state.readers) queue.skip();\n        state.dropUntilConnect = Boolean(message.dropUntilConnect);\n        state.reading = true;\n        break;\n      case "inject":\n        state.injecting = Boolean(message.on);\n        if (message.clearInbox) state.inbox.length = 0;\n        if (state.injecting) for (const item of state.inbox) item.at = performance.now();\n        break;\n      case "send":\n        sendText(message.message);\n        break;\n      case "close":\n        state.closed = true;\n        try {\n          state.socket?.close(1e3, "bye");\n        } catch {\n        }\n        break;\n    }\n  };\n  function open() {\n    if (state.closed) return;\n    let socket;\n    try {\n      socket = new WebSocket(state.url);\n    } catch (error) {\n      post({ type: "socket", state: "error", reason: String(error?.message ?? error) });\n      retry();\n      return;\n    }\n    socket.binaryType = "arraybuffer";\n    state.socket = socket;\n    post({ type: "socket", state: "connecting" });\n    socket.onopen = () => {\n      state.retries = 0;\n      post({ type: "socket", state: "open" });\n    };\n    socket.onmessage = ({ data }) => typeof data === "string" ? onText(data) : onBinary(data);\n    socket.onclose = (event) => {\n      if (state.socket === socket) state.socket = null;\n      post({ type: "socket", state: "closed", code: event.code, reason: event.reason });\n      if (event.code === 4001 || event.code === 4004) state.closed = true;\n      else if (event.code === 4005) setTimeout(open, 6e4);\n      else retry();\n    };\n    socket.onerror = () => {\n    };\n  }\n  function retry() {\n    if (state.closed) return;\n    setTimeout(open, Math.min(5e3, 250 * 2 ** state.retries));\n    state.retries += 1;\n  }\n  function onBinary(data) {\n    const items = hosting() ? decodeSeatPackets(data) : decodePackets(data)?.map((packet) => ({ seat: 0, packet }));\n    if (!items) return;\n    state.stats.framesIn += 1;\n    const at = performance.now();\n    for (const item of items) {\n      state.stats.packetsIn += 1;\n      state.stats.bytesIn += item.packet.byteLength;\n      const command = connectionlessCommand(item.packet);\n      if (command && state.dropCommands.includes(command)) continue;\n      item.at = at;\n      state.inbox.push(item);\n    }\n    if (state.inbox.length > INBOX_LIMIT) {\n      state.stats.dropped += state.inbox.length - INBOX_LIMIT;\n      state.inbox.splice(0, state.inbox.length - INBOX_LIMIT);\n    }\n    pump();\n  }\n  function expireInbox(now) {\n    let stale = 0;\n    while (stale < state.inbox.length && now - state.inbox[stale].at > INBOX_MAX_AGE_MS) stale += 1;\n    if (stale) {\n      state.inbox.splice(0, stale);\n      state.stats.dropped += stale;\n    }\n  }\n  function onText(text) {\n    const message = parseControl(text);\n    if (!message) return;\n    if (message.t === "ping") {\n      sendText(hosting() ? { t: "pong", ts: message.ts, to: message.from } : { t: "pong", ts: message.ts });\n    } else if (message.t === "pong") {\n      if (typeof message.ts !== "number") return;\n      const rtt = Math.max(0, performance.now() - message.ts);\n      if (hosting()) {\n        if (Number.isInteger(message.from)) state.stats.rtts[message.from] = rtt;\n        state.stats.rtt = Math.max(0, ...Object.values(state.stats.rtts));\n      } else {\n        state.stats.rtt = rtt;\n      }\n    } else {\n      post({ type: "control", message });\n    }\n  }\n  function sendText(message) {\n    if (state.socket?.readyState !== WebSocket.OPEN) return false;\n    state.socket.send(JSON.stringify(message));\n    return true;\n  }\n  function flush(now) {\n    if (!state.outbox.length) return;\n    const socket = state.socket;\n    if (socket?.readyState !== WebSocket.OPEN) {\n      state.stats.dropped += state.outbox.length;\n    } else {\n      const seats = hosting();\n      const perPacket = seats ? 3 : 2;\n      let batch = [];\n      let size = 4;\n      const send = () => {\n        if (!batch.length) return;\n        socket.send(seats ? encodeSeatPackets(batch) : encodePackets(batch.map((item) => item.packet)));\n        state.stats.framesOut += 1;\n        batch = [];\n        size = 4;\n      };\n      for (const item of state.outbox) {\n        const bytes = perPacket + item.packet.byteLength;\n        if (size + bytes > MAX_BINARY_BYTES) send();\n        batch.push(item);\n        size += bytes;\n        state.stats.packetsOut += 1;\n        state.stats.bytesOut += item.packet.byteLength;\n      }\n      send();\n    }\n    state.outbox.length = 0;\n    state.lastFlush = now;\n  }\n  function pump() {\n    const now = performance.now();\n    if (state.reading) {\n      let lost = 0;\n      for (const { seat, queue } of state.readers) {\n        let packets = queue.poll([]);\n        lost += queue.lost;\n        if (state.dropUntilConnect && packets.length) {\n          const first = packets.findIndex((packet) => connectionlessCommand(packet) === "connect");\n          packets = first < 0 ? [] : packets.slice(first);\n          if (first >= 0) state.dropUntilConnect = false;\n        }\n        for (const packet of packets) state.outbox.push({ seat, packet });\n      }\n      state.stats.lost = lost;\n    }\n    if (state.outbox.length && now - state.lastFlush >= FLUSH_MS) flush(now);\n    if (state.injecting && state.inbox.length) expireInbox(now);\n    if (state.writer && state.injecting) {\n      let taken = 0;\n      while (taken < state.inbox.length && state.writer.push(state.inbox[taken].packet, state.ports[state.inbox[taken].seat] ?? 0)) taken += 1;\n      if (taken) state.inbox.splice(0, taken);\n    }\n  }\n  async function loop() {\n    if (state.looping) return;\n    state.looping = true;\n    const tick = new Int32Array(new SharedArrayBuffer(4));\n    let lastPing = 0;\n    let lastStats = 0;\n    while (!state.closed) {\n      pump();\n      const now = performance.now();\n      if (now - lastPing >= PING_MS) {\n        lastPing = now;\n        sendText({ t: "ping", ts: now });\n      }\n      if (now - lastStats >= 1e3) {\n        lastStats = now;\n        post({ type: "stats", stats: { ...state.stats, rtts: { ...state.stats.rtts }, inbox: state.inbox.length } });\n      }\n      const wait = Atomics.waitAsync ? Atomics.waitAsync(tick, 0, 0, POLL_MS) : null;\n      if (wait?.async) await wait.value;\n      else await new Promise((resolve) => setTimeout(resolve, POLL_MS));\n    }\n  }\n})();\n'], { type: "text/javascript" }));
     const worker = new Worker(url, { name: "bo1-coop-pump" });
     worker.onmessage = ({ data: message }) => {
       if (message.type === "socket") session.onSocket(message);
@@ -741,7 +741,7 @@
   };
 
   // src/ui/strings.js
-  var LANG = /^pt\b/i.test(navigator.language ?? "") ? "pt" : "en";
+  var LANG = /^pt\b/i.test(navigator.language ?? "") ? "pt" : /^es\b/i.test(navigator.language ?? "") ? "es" : "en";
   var STRINGS = {
     en: {
       tagline: "up to 4 players",
@@ -837,7 +837,7 @@
       turnOn: "Turn on",
       credits: "Game: vel.gg by MisaDev4 · Co-op: BO1 Zombies Co-op",
       notRoomCode: "That is not a room code. Paste the invite link or the 16-letter code.",
-      notRelay: "That is not a relay address. It looks like https://something.workers.dev",
+      notRelay: "That is not a relay address. It looks like https://something.workers.dev (or http://192.168.x.x:8787 for a relay on your local network).",
       controllerReload: "Reload the page to apply the controller setting.",
       engineUpdated: "vel.gg updated its game engine, and this version of the extension does not know it yet: co-op and the controller are off.",
       enginePatchFailed: (m) => `Could not prepare the engine (${m}): co-op and the controller are off.`,
@@ -858,6 +858,122 @@
       relayPitch: "Co-op runs through a relay. The shared one is free but small: a few hours of play a day for everyone together, and it runs out when many people play. Your own relay is free too, takes 5 minutes to create, and is only for your group.",
       relayPitchHost: "You are on the shared relay, which can run out on busy days. With your own (free, 5 minutes) your group never waits.",
       relayHaveOne: "I already have one"
+    },
+    es: {
+      tagline: "hasta 4 jugadores",
+      chip: { solo: "Solo", hosting: "Anfitrión", joining: "Entrando", lobby: "Sala", ingame: "En partida", paused: "Pausado", offline: "Sin conexión", error: "Error", ended: "Desconectado" },
+      intro: "Juega zombies con hasta 3 amigos. Uno crea la partida y los demás entran con el enlace de invitación. Todos necesitan esta extensión.",
+      host: "Crear partida",
+      joinLabel: "Unirse a un amigo",
+      joinPlaceholder: "Código de sala o enlace de invitación",
+      join: "Entrar",
+      room: "Sala",
+      inviteAside: (n) => `${n} plaza${n === 1 ? "" : "s"} libre${n === 1 ? "" : "s"}`,
+      copy: "Copiar enlace",
+      copyCode: "Copiar código",
+      copied: "¡Copiado!",
+      players: "Sala",
+      playersAside: (n, max) => `${n}/${max} conectados`,
+      freeHint: "Envíale el enlace a alguien",
+      player: (n) => `Jugador ${n}`,
+      you: "tú",
+      hostTag: "anfitrión",
+      st: {
+        free: "Plaza libre",
+        left: "Se fue",
+        reconnecting: "Reconectando…",
+        disconnected: "Desconectado · puede volver",
+        ingame: "En partida",
+        ready: "Listo",
+        joining: "Entrando…",
+        turn: "Siguiente en la cola",
+        loading: "Cargando el mapa…",
+        picking: "Eligiendo mapa",
+        lobby: "En la sala",
+        opening: "Abriendo la sala…",
+        away: "No está en la sala"
+      },
+      map: "Mapa",
+      noMap: "Aún sin elegir",
+      mapSubHost: "Todos te siguen a este mapa",
+      mapSubGuest: "Elegido por el anfitrión",
+      hell: "Modo Hell",
+      stepsGuest: ["Sala", "Mapa", "Carga", "Entrar", "Jugar"],
+      stepsHost: ["Mapa", "Carga", "Sala", "Jugar"],
+      pickMap: "Elige un mapa en el menú del juego. Todos te siguen a él.",
+      gate: "Hay jugadores en camino. Tu inicio espera por ellos, así todos aparecen juntos.",
+      startNow: "Empezar ya",
+      allIn: "Están todos. Haz clic en el juego para empezar.",
+      latecomers: "Quien entra después del inicio mira hasta la siguiente ronda (la regla de BO1 para los que llegan tarde).",
+      pausedYou: "Pausado. Todos los demás también están en pausa.",
+      pausedBy: "Pausado por otro jugador.",
+      waitingHost: "Esperando al anfitrión…",
+      hostPicking: "Esperando a que el anfitrión elija un mapa…",
+      opening: (m) => `Abriendo ${m}…`,
+      pressKey: "Pulsa cualquier tecla en la página para cargar el mapa.",
+      loadingMap: "Cargando el mapa…",
+      hostLoading: "Esperando a que el anfitrión termine de cargar…",
+      nextInLine: "Otro jugador está entrando. Tú eres el siguiente.",
+      connecting: "Conectando con el anfitrión…",
+      joiningGame: "Entrando en la partida del anfitrión…",
+      waitingStart: "Ya estás dentro. Esperando a que el anfitrión empiece.",
+      clickToPlay: "Ya estás dentro. Haz clic en el juego para jugar.",
+      lateJoin: "El anfitrión ya había empezado: miras hasta la siguiente ronda y entonces apareces.",
+      ended: "Desconectado del anfitrión. Puedes volver mientras él siga jugando.",
+      failed: "No se pudo entrar. Inténtalo de nuevo.",
+      rejoin: "Volver a entrar",
+      goToHost: "Ir con el anfitrión",
+      leave: "Salir del co-op",
+      otherRelay: (h) => `Esta invitación usa otro relay (${h}). Cámbiate a él para entrar.`,
+      useRelay: "Usar este relay",
+      settings: "Ajustes",
+      yourName: "Tu nombre",
+      namePlaceholder: "Se muestra en la sala",
+      save: "Guardar",
+      connection: "Conexión",
+      relay: "Relay",
+      relayState: { open: "Conectado", connecting: "Conectando…", closed: "Reconectando…", idle: "Iniciando…" },
+      ping: "Ping",
+      dropped: "Paquetes perdidos",
+      relayDefault: "Relay por defecto",
+      relayCustom: (h) => `Personalizado (${h})`,
+      relayNote: "Plan gratis de Cloudflare: unas pocas horas de juego al día, compartidas por todos los que usan este relay. Si tu grupo juega a menudo, crea el tuyo (5 minutos, gratis).",
+      changeRelay: "Cambiar relay",
+      useDefault: "Usar el relay por defecto",
+      cancel: "Cancelar",
+      relayEditNote: "Todos deben usar el mismo relay. Tus enlaces de invitación lo llevan.",
+      relayPlaceholder: "https://tu-relay.workers.dev",
+      usage: (p, t) => `Hoy: ${p}% de la cuota gratis usada · se reinicia a las ${t}`,
+      usedUp: (t) => `La cuota de hoy se agotó · se reinicia a las ${t}`,
+      controller: "Mando",
+      ctrl: { off: "Apagado", unavailable: "No disponible", press: "Pulsa cualquier botón del mando", later: (n) => `${n} · funciona en partida`, active: (n, a, max) => `${n} · mira ${a}/${max}` },
+      aimDown: "Mira −",
+      aimUp: "Mira +",
+      turnOff: "Apagar",
+      turnOn: "Encender",
+      credits: "Juego: vel.gg por MisaDev4 · Co-op: BO1 Zombies Co-op",
+      notRoomCode: "Eso no es un código de sala. Pega el enlace de invitación o el código de 16 letras.",
+      notRelay: "Eso no es una dirección de relay. Se parece a https://algo.workers.dev (o http://192.168.x.x:8787 para un relay en tu red local).",
+      controllerReload: "Recarga la página para aplicar el ajuste del mando.",
+      engineUpdated: "vel.gg actualizó el motor del juego y esta versión de la extensión aún no lo conoce: el co-op y el mando están apagados.",
+      enginePatchFailed: (m) => `No se pudo preparar el motor (${m}): el co-op y el mando están apagados.`,
+      replaced: "Esta sala se abrió en otra pestaña o ventana.",
+      full: (n) => `Esta partida está llena (${n} jugadores).`,
+      workerFailed: (m) => `Falló el worker del co-op: ${m}`,
+      unexpectedMemory: "Memoria del motor inesperada: co-op apagado.",
+      hostNoAnswer: "El anfitrión no respondió. Comprueba que su página del juego está abierta y recarga.",
+      versionMismatch: "Tú y el anfitrión tenéis versiones distintas del juego. Recargad las dos páginas.",
+      hostPlaying: (m) => `El anfitrión está jugando ${m}. Recarga esta página.`,
+      connectFailed: "No se pudo iniciar la conexión con el anfitrión. Recargad las dos páginas.",
+      notLetIn: "El anfitrión no nos dejó entrar. Recargad las dos páginas e intentadlo de nuevo.",
+      hostLeft: "El anfitrión salió de la partida.",
+      updateAvailable: (v) => `Salió la versión ${v}. Actualizar lleva un minuto.`,
+      updateHow: "Cómo actualizar",
+      relayOverQuota: (t) => `Este relay agotó la cuota gratis de hoy${t ? ` (vuelve a las ${t})` : ""}. Con tu propio relay, gratis y listo en 5 minutos, tu grupo juega ahora.`,
+      relayGuide: "Crear mi relay",
+      relayPitch: "El co-op pasa por un relay. El compartido es gratis pero pequeño: unas pocas horas de juego al día para todos juntos, y se agota cuando juega mucha gente. Tu propio relay también es gratis, se crea en 5 minutos y es solo para tu grupo.",
+      relayPitchHost: "Estás en el relay compartido, que puede agotarse los días con más gente. Con el tuyo (gratis, 5 minutos) tu grupo nunca espera.",
+      relayHaveOne: "Ya tengo uno"
     },
     pt: {
       tagline: "até 4 jogadores",
@@ -953,7 +1069,7 @@
       turnOn: "Ligar",
       credits: "Jogo: vel.gg por MisaDev4 · Co-op: BO1 Zombies Co-op",
       notRoomCode: "Isso não é um código de sala. Cole o link de convite ou o código de 16 letras.",
-      notRelay: "Isso não é um endereço de relay. Ele parece com https://algo.workers.dev",
+      notRelay: "Isso não é um endereço de relay. Ele parece com https://algo.workers.dev (ou http://192.168.x.x:8787 para um relay na sua rede local).",
       controllerReload: "Recarregue a página para aplicar a configuração do controle.",
       engineUpdated: "O vel.gg atualizou o motor do jogo e esta versão da extensão ainda não o conhece: co-op e controle desligados.",
       enginePatchFailed: (m) => `Não deu para preparar o motor do jogo (${m}): co-op e controle desligados.`,
@@ -1014,11 +1130,28 @@
     try {
       const url = new URL(String(text).trim());
       if (url.protocol === "wss:") url.protocol = "https:";
-      return url.protocol === "https:" && url.hostname.includes(".") ? url.origin : "";
+      if (url.protocol === "ws:") url.protocol = "http:";
+      if (url.protocol === "https:") return url.hostname.includes(".") ? url.origin : "";
+      return url.protocol === "http:" && isPrivateHost(url.hostname) ? url.origin : "";
     } catch {
       return "";
     }
   }
+  function isPrivateHost(hostname) {
+    const host = hostname.toLowerCase();
+    if (["localhost", "127.0.0.1", "[::1]"].includes(host) || /\.(local|lan|home)$/.test(host)) return true;
+    const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!m) return false;
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    return a === 10 || a === 127 || a === 172 && b >= 16 && b <= 31 || a === 192 && b === 168 || a === 169 && b === 254;
+  }
+  var isLocalRelay = (url) => {
+    try {
+      return new URL(url).protocol === "http:";
+    } catch {
+      return false;
+    }
+  };
   function isLoopback(url) {
     try {
       return ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname);
@@ -1036,7 +1169,7 @@
   }
 
   // src/session/session.js
-  var VERSION = "2.2.2";
+  var VERSION = "2.3.0";
   var AIM_LEVELS = 10;
   function createSession(search = location.search) {
     const params = new URLSearchParams(search);
@@ -1857,11 +1990,12 @@
     return ["loading", "wait"];
   }
   function broadcastLobby(session) {
+    const lobby = hostRoster(session);
+    session.roster = lobby.players;
     if (!session.peer) {
       session.sentLobby = null;
       return;
     }
-    const lobby = hostRoster(session);
     const key = JSON.stringify(lobby);
     if (key === session.sentLobby && Date.now() - (session.sentLobbyAt ?? 0) <= 5e3) return;
     session.sentLobby = key;
@@ -1896,6 +2030,7 @@
   var KICK_SPACING_MS = 15e3;
   var MAX_KICKS = 4;
   var FIXED_CAMERA = 1024;
+  var POS_EVERY_MS = 100;
   function prepareHost(session, Module, args) {
     const engine = new EngineMemory(Module, session.build);
     if (!engine.mailboxesIdle()) throw new Error("unexpectedMemory");
@@ -1956,8 +2091,9 @@
     syncPause(session, present, active, phase, screen2);
     broadcastLobby(session);
     const view2 = latestView();
-    if (present.some(active) && view2 && view2.ms !== session.sentViewMs && !(view2.flags & FIXED_CAMERA)) {
+    if (present.some(active) && view2 && view2.ms !== session.sentViewMs && now - (session.sentPosAt ?? 0) >= POS_EVERY_MS && !(view2.flags & FIXED_CAMERA)) {
       session.sentViewMs = view2.ms;
+      session.sentPosAt = now;
       send(session, { t: "pos", o: view2.origin, a: view2.angles });
     }
     for (const g of all) kickIfStale(session, g, phase(g), now);
@@ -2555,6 +2691,39 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
       notLoaded: "Start a map to use this.",
       cheatsOff: "This map has cheats off: the commands won't work."
     },
+    es: {
+      title: "Modo diversión",
+      note: "Solo el anfitrión. Se aplica a todos en tu partida.",
+      pause: "Consejo: pulsa Esc en el juego para abrir esta tarjeta.",
+      flyHint: "Volar y Atravesar pasan por las paredes: apágalos con los pies en el suelo o el jugador cae fuera del mapa.",
+      players: "Jugadores",
+      all: "Todos",
+      god: "Inmortal",
+      demigod: "No muere",
+      notarget: "Invisible",
+      noclip: "Atravesar",
+      ufo: "Volar",
+      speed: "Velocidad",
+      money: "Puntos",
+      ammo: "Munición",
+      infiniteClip: "Cargador infinito",
+      infiniteStock: "Reserva infinita",
+      refill: "Rellenar a todos",
+      zombies: "Zombies",
+      oneHit: "Mueren de un golpe",
+      passive: "Os ignoran",
+      clear: "Limpiar zombies",
+      world: "Mundo",
+      timescale: "Velocidad del juego",
+      jump: "Altura del salto",
+      gravity: "Gravedad",
+      weapons: "Armas (para ti)",
+      weaponMissing: (w) => `${w} no está en este mapa.`,
+      weaponGiven: (w) => `${w} entregada.`,
+      reset: "Restablecer todo",
+      notLoaded: "Abre un mapa para usarlo.",
+      cheatsOff: "Este mapa tiene los trucos desactivados: los comandos no funcionarán."
+    },
     pt: {
       title: "Modo diversão",
       note: "Só o host. Vale para todo mundo na sua partida.",
@@ -2590,6 +2759,8 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
     }
   };
   var F = TEXT[LANG];
+  var YOU = { en: "You", es: "Tú", pt: "Você" };
+  var PLAYER = { en: "Player", es: "Jugador", pt: "Jogador" };
   var PLAYER_TOGGLES = ["god", "demigod", "notarget", "noclip", "ufo"];
   var SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
   var TIMESCALES = [0.25, 0.5, 0.75, 1, 1.5, 2];
@@ -2644,10 +2815,10 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
   }
   var playerState = (fun, slot) => fun.players[slot] ??= { god: false, demigod: false, notarget: false, noclip: false, ufo: false, speed: 1 };
   function funPlayers(session) {
-    const players = [{ slot: 0, n: 1, name: session.name || (LANG === "pt" ? "Você" : "You") }];
+    const players = [{ slot: 0, n: 1, name: session.name || YOU[LANG] }];
     if (session.mode === "host") {
       for (const g of session.guests.values()) {
-        if (g.present && g.slot?.state === SLOT.active) players.push({ slot: g.slot.slot, n: g.seat + 1, name: g.state?.name || `${LANG === "pt" ? "Jogador" : "Player"} ${g.seat + 1}` });
+        if (g.present && g.slot?.state === SLOT.active) players.push({ slot: g.slot.slot, n: g.seat + 1, name: g.state?.name || `${PLAYER[LANG]} ${g.seat + 1}` });
       }
     }
     return players;
@@ -2872,6 +3043,7 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
   function funSection(session) {
     const fun = session.fun;
     const blocks = [];
+    if (!fun.open) return { kind: "section", title: F.title, act: "fun", open: false, blocks };
     const a = addresses(session);
     if (!a || !["ready", "playing"].includes(screen())) {
       blocks.push({ kind: "text", cls: "muted small", text: F.notLoaded });
@@ -2957,7 +3129,7 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
     if (session.update) blocks.push({ kind: "callout", tone: "ok", text: T.updateAvailable(session.update.version), buttons: [{ act: "openUpdate", label: T.updateHow, style: "primary" }] });
     if (!session.mode) return soloView(session, blocks, playing);
     const hosting = session.mode === "host";
-    const roster = hosting ? hostRoster(session).players : guestRoster(session);
+    const roster = hosting ? session.roster ?? hostRoster(session).players : guestRoster(session);
     const chip = hosting ? hostSection(session, blocks, roster, screen2) : guestSection(session, blocks, screen2);
     const me = hosting ? 1 : validSeat(session.seat) ? session.seat + 1 : 0;
     const connected = roster.filter((p) => CONNECTED.includes(p.status)).length;
@@ -3096,6 +3268,7 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
     return { kind: "map", glyph: name[0], name, tag: horde ? T.hell : null, sub };
   }
   function settingsSection(session, inRoom) {
+    if (!session.showSettings) return { kind: "section", title: T.settings, act: "settings", open: false, blocks: [] };
     const blocks = [{ kind: "input", label: T.yourName, field: "name", placeholder: T.namePlaceholder, act: "saveName", button: T.save, value: session.name, maxLength: 16 }];
     if (inRoom) {
       const items = [
@@ -3178,6 +3351,7 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
 
   // src/main.js
   var TICK_MS = 50;
+  var RENDER_TICKS_IN_GAME = 5;
   var LANG_QUERY = LANG === "pt" ? "?lang=pt#" : "#";
   var USAGE_REFRESH_MS = 6e5;
   if (!window.__bo1Coop) start();
@@ -3210,8 +3384,10 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
       session.gamepad.start();
     }
     const refreshUsage = () => fetch(`${session.relay}/usage`).then((r) => r.ok ? r.json() : null).then((usage) => session.usage = Number.isFinite(usage?.fraction) ? usage : null).catch(() => session.usage = null);
-    refreshUsage();
-    setInterval(refreshUsage, USAGE_REFRESH_MS);
+    if (!isLocalRelay(session.relay)) {
+      refreshUsage();
+      setInterval(refreshUsage, USAGE_REFRESH_MS);
+    }
     checkForUpdate(session);
     if (session.mode) {
       if (session.mode === "guest") session.guestId = guestIdFor(session.room);
@@ -3231,7 +3407,9 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
       session.error = error.message;
       session.note(`tick failed: ${error.stack ?? error}`);
     }
-    session.card.render(view(session));
+    session.ticks = (session.ticks ?? 0) + 1;
+    const inGame = window.five?.screen === "playing" && !session.engine?.menuOpen();
+    if (!inGame || session.ticks % RENDER_TICKS_IN_GAME === 0) session.card.render(view(session));
   }
   function reportHidden(session) {
     const input = session.engine?.Module._KB_Input;

@@ -40,7 +40,7 @@ With controller support and a fun mode for the host (god mode, wonder weapons, i
 - **Fun mode** for the host: god mode, invisible, noclip, fly, speed and points per player; infinite ammo; one-hit or
   passive zombies; game speed, jump and gravity; wonder weapons. [More below](#fun-mode).
 - **PlayStation and Xbox controllers** with adjustable aim speed.
-- **English and Portuguese**, picked from your browser's language.
+- **English, Spanish and Portuguese**, picked from your browser's language.
 - **Stable**: fixes the crash where one player pressing Escape or T (chat) took down the other players' games.
 
 <p align="center"><img src="docs/images/in-game.png" width="640" alt="Playing Kino der Toten in co-op, with the players indicator in the corner"><br><sub>In game, the card folds into a small indicator: one dot per player, and your ping</sub></p>
@@ -161,6 +161,33 @@ npx wrangler deploy    # prints your relay's address
 
 Then step 4 above.
 
+### Relay on your local network (LAN party)
+
+Everyone in the same house? Run the relay on one PC on the Wi-Fi instead of on Cloudflare: pings of a few
+milliseconds, no daily allowance, and it works without internet once vel.gg's map packs are cached. The game server is
+still the host's own browser; the relay only forwards packets between the browsers.
+
+1. On one PC (needs [Node.js](https://nodejs.org) 22+):
+
+   ```sh
+   git clone https://github.com/AllanLotta/bo1-zombies-coop
+   cd bo1-zombies-coop
+   npm install
+   npm run relay:lan
+   ```
+
+   Leave it running. Find that PC's address on the network (`ipconfig` on Windows, `ip a` on Linux, System Settings →
+   Network on a Mac): something like `192.168.1.20`. Your relay is `http://192.168.1.20:8787`.
+2. On **every** player's Chrome, once: open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, type
+   `http://192.168.1.20:8787` (your address) in the box, set it to **Enabled** and relaunch Chrome. vel.gg is an
+   https page and Chrome refuses to connect it to a plain-http relay on the network otherwise. If Chrome asks whether
+   the site may access devices on your local network, allow it.
+3. On the Co-op card: **Settings → Change relay**, paste `http://192.168.1.20:8787`, **Save**. The host's invite
+   links carry it, so the others only click **Use this relay**.
+
+Only private addresses (`10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`, `*.local`) are accepted over plain http; a relay
+on the internet must be https, as the Cloudflare one is.
+
 ## How it works
 
 vel.gg runs the decompiled Black Ops 1 engine as WebAssembly. The engine's own client and server still talk through
@@ -251,7 +278,7 @@ Com controle e um modo diversão para o host (imortal, armas especiais, muniçã
   munição infinita; zumbis de 1 tiro ou que ignoram vocês; velocidade do jogo, pulo e gravidade; armas especiais.
   [Detalhes abaixo](#modo-diversão).
 - **Controle de PlayStation e Xbox**, com ajuste de velocidade da mira.
-- **Em português** quando o navegador está em português.
+- **Em português** quando o navegador está em português (e em espanhol ou inglês, conforme o navegador).
 - **Corrige o crash** em que um jogador apertando ESC ou T (chat) derrubava o jogo dos outros.
 
 ### Instalar (2 minutos, cada jogador)
@@ -334,3 +361,19 @@ cartão avisa. O seu próprio relay também é grátis, leva uns 5 minutos e a c
 
 Os seus links de convite já levam o relay junto: os amigos só clicam em **Usar este relay** no cartão deles.
 Pelo terminal: veja os comandos na seção em inglês, acima.
+
+### Relay na rede local (LAN)
+
+Todo mundo na mesma casa? Rode o relay em um PC do Wi-Fi em vez de na Cloudflare: ping de poucos milissegundos, sem
+cota diária, e funciona sem internet depois que os mapas do vel.gg já estão no cache. O servidor do jogo continua sendo
+o navegador do host; o relay só repassa os pacotes entre os navegadores.
+
+1. Em um PC (precisa do [Node.js](https://nodejs.org) 22+): `git clone https://github.com/AllanLotta/bo1-zombies-coop`,
+   `cd bo1-zombies-coop`, `npm install`, `npm run relay:lan`, e deixe rodando. Veja o endereço desse PC na rede
+   (`ipconfig` no Windows, `ip a` no Linux): algo como `192.168.1.20`. O relay é `http://192.168.1.20:8787`.
+2. No Chrome de **cada** jogador, uma vez: abra `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, digite
+   `http://192.168.1.20:8787` (o seu endereço), marque **Enabled** e reinicie o Chrome. O vel.gg é uma página https e,
+   sem isso, o Chrome não deixa ela conectar num relay http da rede. Se o Chrome perguntar se o site pode acessar
+   dispositivos da rede local, permita.
+3. No cartão Co-op: **Configurações → Trocar relay**, cole `http://192.168.1.20:8787`, **Salvar**. Os links de convite
+   do host já levam o relay; os outros só clicam em **Usar este relay**.

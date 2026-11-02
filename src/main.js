@@ -12,13 +12,15 @@ import { createSession } from "./session/session.js";
 import { Card } from "./ui/card.js";
 import { LANG, T } from "./ui/strings.js";
 import { view } from "./ui/view.js";
-import { DEFAULT_RELAY, inviteLink, normalizeRelay } from "./util/relay.js";
+import { DEFAULT_RELAY, inviteLink, isLocalRelay, normalizeRelay } from "./util/relay.js";
 import { createFun, funActions, funTick, watchConsole } from "./fun/fun.js";
 import { cleanName, guestIdFor, saveSetting } from "./util/settings.js";
 import { checkForUpdate, RELAY_GUIDE } from "./util/updates.js";
 
 const TICK_MS = 50;
-const LANG_QUERY = LANG === "pt" ? "?lang=pt#" : "#";
+// In game the card is a small pill and the page's main thread belongs to the engine's frames: refresh it less often.
+const RENDER_TICKS_IN_GAME = 5;
+const LANG_QUERY = LANG === "pt" ? "?lang=pt#" : "#"; // the guide exists in English and Portuguese
 const USAGE_REFRESH_MS = 600000;
 
 if (!window.__bo1Coop) start();
@@ -61,8 +63,11 @@ function start() {
       .then((r) => (r.ok ? r.json() : null))
       .then((usage) => (session.usage = Number.isFinite(usage?.fraction) ? usage : null))
       .catch(() => (session.usage = null));
-  refreshUsage();
-  setInterval(refreshUsage, USAGE_REFRESH_MS);
+  // A LAN relay has no allowance to show, and the https page could not fetch from it anyway (mixed content).
+  if (!isLocalRelay(session.relay)) {
+    refreshUsage();
+    setInterval(refreshUsage, USAGE_REFRESH_MS);
+  }
   checkForUpdate(session);
 
   if (session.mode) {
@@ -85,7 +90,9 @@ function tick(session) {
     session.error = error.message;
     session.note(`tick failed: ${error.stack ?? error}`);
   }
-  session.card.render(view(session));
+  session.ticks = (session.ticks ?? 0) + 1;
+  const inGame = window.five?.screen === "playing" && !session.engine?.menuOpen();
+  if (!inGame || session.ticks % RENDER_TICKS_IN_GAME === 0) session.card.render(view(session));
 }
 
 /**
