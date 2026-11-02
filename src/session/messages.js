@@ -61,6 +61,8 @@ function onGuestMessage(session, message) {
       break;
     case "pause":
       session.remotePause = Boolean(message.on);
+      session.remotePauseWhy = session.remotePause ? message.why ?? null : null;
+      session.remotePauseWho = Array.isArray(message.who) ? message.who.filter((n) => typeof n === "string").slice(0, 3) : [];
       break;
     case "lobby":
       if (Array.isArray(message.players)) session.lobby = message;
@@ -93,7 +95,7 @@ function guestArrived(session, seat) {
   if (!validSeat(seat)) return;
   const record = guest(session, seat);
   if (!record.present) session.note(`player ${seat + 1} joined the room`);
-  Object.assign(record, { present: true, state: null, pause: false, sent: {}, sentPause: undefined });
+  Object.assign(record, { present: true, state: null, pause: false, sent: {} });
   session.sentLobby = null;
   sendGameInfo(session, seat);
 }
@@ -101,6 +103,7 @@ function guestArrived(session, seat) {
 function guestLeft(session, seat) {
   const record = guest(session, seat);
   Object.assign(record, { present: false, leftAt: Date.now(), pause: false });
+  // A seat held for a dropped player keeps its wasInGame flag so trackDropped (host.js) notices the fall.
   session.note(`player ${seat + 1} left the room`);
 }
 

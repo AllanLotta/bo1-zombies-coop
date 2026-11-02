@@ -5,7 +5,9 @@ import { MAX_GUESTS } from "../../relay/src/protocol.js";
 import { SLOT } from "../engine/builds.js";
 import { EngineMemory, NORMAL_SPEED } from "../engine/memory.js";
 import { devmapZone, gameSettings, insertBeforeDevmap, latestView, screen as pageScreen } from "../game/page.js";
+import { guardPlayers } from "../fun/fun.js";
 import { send } from "../net/pump.js";
+import { cleanName } from "../util/settings.js";
 import { broadcastLobby } from "./lobby.js";
 import { guest, sendGameInfo } from "./messages.js";
 
@@ -27,6 +29,8 @@ const FIXED_CAMERA = 0x400;
 // How often guests hear where the host is. They only use it to spawn next to the host (see stayNearHost in guest.js),
 // so 10 times a second is plenty, and it keeps the relay's text traffic (which counts against its quota) low.
 const POS_EVERY_MS = 100;
+// A player who fell out of the game holds everyone this long at most; then the game goes on without them.
+const DROP_HOLD_MAX_MS = 300000;
 
 /** Called right before the engine starts: sets up the guest queues and the command line. */
 export function prepareHost(session, Module, args) {
@@ -103,7 +107,8 @@ export function hostTick(session) {
   // The level starts once the host clicks in: everyone already connected starts together, later players watch until
   // the next round.
   coopWait(session, screen === "playing" ? 0 : 1);
-  syncPause(session, present, active, phase, screen);
+  trackDropped(session, all, active, phase, screen, now);
+  syncPause(session, present, active, phase, screen, now);
   broadcastLobby(session);
 
   const view = latestView();
@@ -152,33 +157,70 @@ function sendWhenChanged(session, g, kind, message, now) {
 }
 
 /**
- * Anyone opening the menu pauses everyone, as solo BO1 does. The host freezes its server and tells each guest
- * whether someone else is paused. While a guest is still connecting nothing pauses: it needs the server running.
+ * A player who falls out mid-game (connection lost, page closed, crash) must not cost the others the game: everyone
+ * is held until they are back or the host decides to go on without them. session.dropped: seat -> { since, name }.
  */
-function syncPause(session, present, active, phase, screen) {
+function trackDropped(session, all, active, phase, screen, now) {
+  session.dropped ??= new Map();
+  for (const g of all) {
+    const inGame = g.present && active(g);
+    if (inGame && screen === "playing") g.wasInGame = true;
+    else if (!inGame && g.wasInGame) {
+      g.wasInGame = false;
+      if (screen === "playing" && !session.dropped.has(g.seat)) {
+        session.dropped.set(g.seat, { since: now, name: cleanName(g.state?.name) || null });
+        session.note(`player ${g.seat + 1} fell out of the game: holding everyone`);
+      }
+    }
+    if (inGame && phase(g) === "connected" && session.dropped.delete(g.seat)) session.note(`player ${g.seat + 1} is back`);
+  }
+  for (const [seat, d] of session.dropped) {
+    if (now - d.since > DROP_HOLD_MAX_MS || screen !== "playing") {
+      session.dropped.delete(seat);
+      session.note(`stopped waiting for player ${seat + 1}`);
+    }
+  }
+}
+
+/**
+ * Anyone opening the menu pauses everyone, as solo BO1 does, and so does a player falling out (see trackDropped). The
+ * host freezes its server and tells each guest whether (and why) someone else holds the game. While a guest is still
+ * connecting nothing pauses: it needs the server running. Mid-game that stretch is guarded instead: everyone is
+ * invulnerable and the zombies lose interest until the newcomer is in (see guardPlayers in fun.js).
+ */
+function syncPause(session, present, active, phase, screen, now) {
   const engine = session.engine;
   const menuOpen = Boolean(engine?.menuOpen()) && screen === "playing";
   session.menuOpen = menuOpen;
-  const linked = present.filter((g) => active(g) && phase(g) === "connected");
+  // Slot states come straight from the engine; a guest's own phase report can lag behind by a message or two.
+  const linked = present.filter((g) => active(g));
   const connecting = present.some((g) => !active(g) && CONNECTING.includes(phase(g)));
-  if (engine) applyHostPause(session, linked.length > 0 && !connecting && (menuOpen || linked.some((g) => g.pause)), menuOpen);
+  const dropHold = session.dropped?.size > 0;
+  const guestPause = linked.find((g) => g.pause);
+  const wanted = !connecting && ((linked.length > 0 && (menuOpen || Boolean(guestPause))) || dropHold);
+  if (engine) {
+    applyHostPause(session, wanted, menuOpen);
+    guardPlayers(session, screen === "playing" && connecting);
+  }
   if (engine && !session.paused && present.some((g) => !active(g))) {
     if (engine.dvar("clPaused")) engine.setDvar("clPaused", 0);
     if (engine.dvar("svPaused")) engine.setDvar("svPaused", 0);
   }
+  const dropped = dropHold ? [...session.dropped.values()] : [];
   for (const g of present) {
-    const on = menuOpen || linked.some((other) => other !== g && other.pause);
-    if (on !== g.sentPause) {
-      g.sentPause = on;
-      send(session, { t: "pause", on, to: g.seat });
-    }
+    const other = linked.find((o) => o !== g && o.pause);
+    const on = !connecting && (menuOpen || dropHold || Boolean(other));
+    const why = !on ? undefined : dropHold ? "dropped" : menuOpen ? "host" : "player";
+    const who = why === "dropped" ? dropped.map((d) => d.name).filter(Boolean) : why === "player" ? [cleanName(other.state?.name)].filter(Boolean) : [];
+    // Repeated now and then, like the state message: a lost "resume" would leave a guest frozen for good.
+    sendWhenChanged(session, g, "pause", { t: "pause", on, to: g.seat, why, who }, now);
   }
 }
 
 function applyHostPause(session, paused, menuOpen) {
   const engine = session.engine;
   if (paused) {
-    if (!session.paused) session.note(menuOpen ? "paused" : "paused by a guest");
+    if (!session.paused) session.note(menuOpen ? "paused" : session.dropped?.size ? "paused: a player fell out" : "paused by a guest");
     engine.holdServer(true);
     if (!engine.dvar("svPaused")) engine.setDvar("svPaused", 1);
     if (!engine.dvar("clPaused")) engine.setDvar("clPaused", 1);

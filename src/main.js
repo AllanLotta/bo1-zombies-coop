@@ -134,6 +134,10 @@ function actions(session) {
       go(location.pathname);
     },
     startNow: () => (session.startAlone = true),
+    continueWithout: () => {
+      session.dropped?.clear();
+      session.note("the host goes on without the player who fell out");
+    },
     rejoin: () => location.reload(),
     openUpdate: () => window.open(session.update?.url, "_blank", "noopener"),
     openRelayGuide: () => window.open(`${RELAY_GUIDE.replace("#", LANG_QUERY)}`, "_blank", "noopener"),

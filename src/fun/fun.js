@@ -162,6 +162,7 @@ export function createFun() {
     noticeAt: 0,
     lastStockAt: 0,
     lastZombiesAt: 0,
+    guarding: false, // see guardPlayers
   };
 }
 
@@ -233,15 +234,51 @@ export function funTick(session) {
     fun.lastStockAt = now;
     refillStock(session, a);
   }
-  if ((fun.oneHit || fun.passive) && now - fun.lastZombiesAt > 1500) {
+  if ((fun.oneHit || fun.passive || fun.guarding) && now - fun.lastZombiesAt > 1500) {
     // New zombies spawn all the time: re-apply to every living one. Skipped while earlier commands are waiting.
     fun.lastZombiesAt = now;
     if (!fun.queue.length) {
       if (fun.oneHit) fun.queue.push("ai axis health 1");
-      if (fun.passive) fun.queue.push("ai axis ignoreall 1");
+      if (fun.passive || fun.guarding) fun.queue.push("ai axis ignoreall 1");
     }
   }
   flushQueue(session);
+}
+
+/**
+ * Mid-game the server must keep running while someone (re)connects, so nobody can be paused then. Instead, for that
+ * stretch every player is invulnerable and invisible to the zombies, and the zombies ignore everyone, through the
+ * same engine flags and command the fun mode uses. Switched off again (unless the fun mode has them on) once the
+ * newcomer is in.
+ */
+export function guardPlayers(session, on) {
+  const fun = session.fun;
+  const a = addresses(session);
+  if (!a) return;
+  if (on) {
+    if (!fun.guarding) {
+      fun.guarding = true;
+      if (!fun.passive) fun.queue.push("ai axis ignoreall 1");
+      session.note("guarding the players while someone connects");
+    }
+    for (const { slot } of funPlayers(session)) {
+      const ent = a.ent(slot);
+      if (!a.client(slot)) continue;
+      setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.god, true);
+      setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.notarget, true);
+    }
+  } else if (fun.guarding) {
+    fun.guarding = false;
+    for (const { slot } of funPlayers(session)) {
+      const p = fun.players[slot];
+      const ent = a.ent(slot);
+      if (!a.client(slot)) continue;
+      if (!p?.god) setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.god, false);
+      if (!p?.notarget) setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.notarget, false);
+    }
+    if (!fun.passive) fun.queue.push("ai axis ignoreall 0");
+    session.note("guard off: everyone is in");
+  }
 }
 
 function flushQueue(session) {

@@ -791,6 +791,11 @@
       latecomers: "Players who join after the start watch until the next round (the BO1 rule for latecomers).",
       pausedYou: "Paused. Everyone is paused too.",
       pausedBy: "Paused by another player.",
+      pausedByName: (n) => `Paused by ${n}.`,
+      pausedDropped: (names) => `Paused: ${names || "a player"} fell out of the game. The host decides whether to wait or go on.`,
+      droppedHold: (names) => `${names || "A player"} fell out of the game. Everyone is held until they are back.`,
+      continueWithout: "Continue without them",
+      guarding: "Someone is connecting, so the game cannot pause: until they are in, nobody can be hurt and the zombies ignore everyone.",
       waitingHost: "Waiting for the host…",
       hostPicking: "Waiting for the host to pick a map…",
       opening: (m) => `Opening ${m}…`,
@@ -907,6 +912,11 @@
       latecomers: "Quien entra después del inicio mira hasta la siguiente ronda (la regla de BO1 para los que llegan tarde).",
       pausedYou: "Pausado. Todos los demás también están en pausa.",
       pausedBy: "Pausado por otro jugador.",
+      pausedByName: (n) => `Pausado por ${n}.`,
+      pausedDropped: (names) => `Pausado: ${names || "un jugador"} se ha desconectado. El anfitrión decide si esperar o seguir.`,
+      droppedHold: (names) => `${names || "Un jugador"} se ha desconectado. Todos quedan en pausa hasta que vuelva.`,
+      continueWithout: "Continuar sin él",
+      guarding: "Alguien está entrando y el juego no puede pausarse: hasta que esté dentro nadie recibe daño y los zombies os ignoran.",
       waitingHost: "Esperando al anfitrión…",
       hostPicking: "Esperando a que el anfitrión elija un mapa…",
       opening: (m) => `Abriendo ${m}…`,
@@ -1023,6 +1033,11 @@
       latecomers: "Quem entrar depois do início assiste até a próxima rodada (regra do BO1 para quem chega atrasado).",
       pausedYou: "Pausado. Todos estão pausados também.",
       pausedBy: "Pausado por outro jogador.",
+      pausedByName: (n) => `Pausado por ${n}.`,
+      pausedDropped: (names) => `Pausado: ${names || "um jogador"} caiu da partida. O host decide se espera ou segue.`,
+      droppedHold: (names) => `${names || "Um jogador"} caiu da partida. Todo mundo fica parado até ele voltar.`,
+      continueWithout: "Continuar sem ele",
+      guarding: "Alguém está entrando e o jogo não pode pausar: até ele entrar ninguém toma dano e os zumbis ignoram todo mundo.",
       waitingHost: "Esperando o host…",
       hostPicking: "Esperando o host escolher o mapa…",
       opening: (m) => `Abrindo ${m}…`,
@@ -1319,6 +1334,8 @@
         break;
       case "pause":
         session.remotePause = Boolean(message.on);
+        session.remotePauseWhy = session.remotePause ? message.why ?? null : null;
+        session.remotePauseWho = Array.isArray(message.who) ? message.who.filter((n) => typeof n === "string").slice(0, 3) : [];
         break;
       case "lobby":
         if (Array.isArray(message.players)) session.lobby = message;
@@ -1348,7 +1365,7 @@
     if (!validSeat(seat)) return;
     const record = guest(session, seat);
     if (!record.present) session.note(`player ${seat + 1} joined the room`);
-    Object.assign(record, { present: true, state: null, pause: false, sent: {}, sentPause: void 0 });
+    Object.assign(record, { present: true, state: null, pause: false, sent: {} });
     session.sentLobby = null;
     sendGameInfo(session, seat);
   }
@@ -1962,6 +1979,493 @@
     return rewriteFunctions(bytes, module, edits);
   }
 
+  // src/fun/fun.js
+  var TEXT = {
+    en: {
+      title: "Fun mode",
+      note: "Host only. Changes apply to everyone in your game.",
+      pause: "Tip: press Esc in game to open this card.",
+      flyHint: "Fly and Noclip go through walls: switch them off standing on the floor, or you fall out of the map.",
+      players: "Players",
+      all: "Everyone",
+      god: "God",
+      demigod: "Can't die",
+      notarget: "Invisible",
+      noclip: "Noclip",
+      ufo: "Fly",
+      speed: "Speed",
+      money: "Points",
+      ammo: "Ammo",
+      infiniteClip: "Infinite clip",
+      infiniteStock: "Infinite reserve",
+      refill: "Refill everyone",
+      zombies: "Zombies",
+      oneHit: "Die in one hit",
+      passive: "Ignore players",
+      clear: "Clear zombies",
+      world: "World",
+      timescale: "Game speed",
+      jump: "Jump height",
+      gravity: "Gravity",
+      weapons: "Weapons (for you)",
+      weaponMissing: (w) => `${w} is not on this map.`,
+      weaponGiven: (w) => `${w} given.`,
+      reset: "Reset everything",
+      notLoaded: "Start a map to use this.",
+      cheatsOff: "This map has cheats off: the commands won't work."
+    },
+    es: {
+      title: "Modo diversión",
+      note: "Solo el anfitrión. Se aplica a todos en tu partida.",
+      pause: "Consejo: pulsa Esc en el juego para abrir esta tarjeta.",
+      flyHint: "Volar y Atravesar pasan por las paredes: apágalos con los pies en el suelo o el jugador cae fuera del mapa.",
+      players: "Jugadores",
+      all: "Todos",
+      god: "Inmortal",
+      demigod: "No muere",
+      notarget: "Invisible",
+      noclip: "Atravesar",
+      ufo: "Volar",
+      speed: "Velocidad",
+      money: "Puntos",
+      ammo: "Munición",
+      infiniteClip: "Cargador infinito",
+      infiniteStock: "Reserva infinita",
+      refill: "Rellenar a todos",
+      zombies: "Zombies",
+      oneHit: "Mueren de un golpe",
+      passive: "Os ignoran",
+      clear: "Limpiar zombies",
+      world: "Mundo",
+      timescale: "Velocidad del juego",
+      jump: "Altura del salto",
+      gravity: "Gravedad",
+      weapons: "Armas (para ti)",
+      weaponMissing: (w) => `${w} no está en este mapa.`,
+      weaponGiven: (w) => `${w} entregada.`,
+      reset: "Restablecer todo",
+      notLoaded: "Abre un mapa para usarlo.",
+      cheatsOff: "Este mapa tiene los trucos desactivados: los comandos no funcionarán."
+    },
+    pt: {
+      title: "Modo diversão",
+      note: "Só o host. Vale para todo mundo na sua partida.",
+      pause: "Dica: aperte Esc no jogo para abrir este cartão.",
+      flyHint: "Voa e Atravessa passam por paredes: desligue com os pés no chão, senão o jogador cai para fora do mapa.",
+      players: "Jogadores",
+      all: "Todos",
+      god: "Imortal",
+      demigod: "Não morre",
+      notarget: "Invisível",
+      noclip: "Atravessa",
+      ufo: "Voa",
+      speed: "Velocidade",
+      money: "Pontos",
+      ammo: "Munição",
+      infiniteClip: "Pente infinito",
+      infiniteStock: "Reserva infinita",
+      refill: "Encher a de todos",
+      zombies: "Zumbis",
+      oneHit: "Morrem com 1 tiro",
+      passive: "Ignoram vocês",
+      clear: "Limpar zumbis",
+      world: "Mundo",
+      timescale: "Velocidade do jogo",
+      jump: "Altura do pulo",
+      gravity: "Gravidade",
+      weapons: "Armas (para você)",
+      weaponMissing: (w) => `${w} não existe neste mapa.`,
+      weaponGiven: (w) => `${w} entregue.`,
+      reset: "Resetar tudo",
+      notLoaded: "Abra um mapa para usar.",
+      cheatsOff: "Este mapa está com cheats desligados: os comandos não vão funcionar."
+    }
+  };
+  var F = TEXT[LANG];
+  var YOU = { en: "You", es: "Tú", pt: "Você" };
+  var PLAYER = { en: "Player", es: "Jugador", pt: "Jogador" };
+  var PLAYER_TOGGLES = ["god", "demigod", "notarget", "noclip", "ufo"];
+  var SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
+  var TIMESCALES = [0.25, 0.5, 0.75, 1, 1.5, 2];
+  var JUMPS = [39, 80, 150, 300, 600];
+  var GRAVITIES = [800, 600, 400, 200, 100];
+  var STOCK = 999;
+  var WEAPONS = [
+    ["ray_gun_zm", "Ray Gun"],
+    ["ray_gun_upgraded_zm", "Ray Gun (PaP)"],
+    ["thundergun_zm", "Thundergun"],
+    ["thundergun_upgraded_zm", "Thundergun (PaP)"],
+    ["tesla_gun_zm", "Wunderwaffe"],
+    ["freezegun_zm", "Winter's Howl"],
+    ["microwavegun_zm", "Wave Gun"],
+    ["sniper_explosive_zm", "Scavenger"],
+    ["crossbow_explosive_zm", "Crossbow"],
+    ["knife_ballistic_zm", "Ballistic Knife"],
+    ["hk21_zm", "HK21"],
+    ["rpk_zm", "RPK"],
+    ["galil_zm", "Galil"],
+    ["commando_zm", "Commando"],
+    ["famas_zm", "FAMAS"],
+    ["aug_acog_zm", "AUG"],
+    ["spas_zm", "SPAS-12"],
+    ["china_lake_zm", "China Lake"],
+    ["python_zm", "Python"],
+    ["cz75dw_zm", "CZ75 Dual"],
+    ["zombie_cymbal_monkey", "Monkey Bomb"],
+    ["zombie_black_hole_bomb", "Gersh Device"],
+    ["bowie_knife_zm", "Bowie Knife"],
+    ["claymore_zm", "Claymores"]
+  ];
+  function createFun() {
+    return {
+      open: false,
+      players: {},
+      // slot -> { god, demigod, notarget, noclip, ufo, speed }
+      infiniteClip: false,
+      infiniteStock: false,
+      oneHit: false,
+      passive: false,
+      timescale: 1,
+      jump: 39,
+      gravity: 800,
+      queue: [],
+      // console commands waiting for the engine's mailbox
+      notice: null,
+      noticeAt: 0,
+      lastStockAt: 0,
+      lastZombiesAt: 0,
+      guarding: false
+      // see guardPlayers
+    };
+  }
+  var playerState = (fun, slot) => fun.players[slot] ??= { god: false, demigod: false, notarget: false, noclip: false, ufo: false, speed: 1 };
+  function funPlayers(session) {
+    const players = [{ slot: 0, n: 1, name: session.name || YOU[LANG] }];
+    if (session.mode === "host") {
+      for (const g of session.guests.values()) {
+        if (g.present && g.slot?.state === SLOT.active) players.push({ slot: g.slot.slot, n: g.seat + 1, name: g.state?.name || `${PLAYER[LANG]} ${g.seat + 1}` });
+      }
+    }
+    return players;
+  }
+  var funAvailable = (session) => session.mode !== "guest";
+  function addresses(session) {
+    const f = session.build?.fun;
+    const engine = session.engine;
+    if (!f || !engine) return null;
+    return {
+      f,
+      engine,
+      ent: (slot) => f.entities + slot * f.entitySize,
+      client: (slot) => engine.int(f.entities + slot * f.entitySize + f.ent.client)
+    };
+  }
+  function setBit(engine, address, bit, on) {
+    if (on) Atomics.or(engine.i32, address >> 2, bit);
+    else Atomics.and(engine.i32, address >> 2, ~bit);
+  }
+  function say(fun, text) {
+    fun.notice = text;
+    fun.noticeAt = Date.now();
+  }
+  function funTick(session) {
+    const fun = session.fun;
+    if (fun.notice && Date.now() - fun.noticeAt > 6e3) fun.notice = null;
+    const a = addresses(session);
+    if (!a || !funAvailable(session) || screen() !== "playing") {
+      flushQueue(session);
+      return;
+    }
+    const { f, engine } = a;
+    const now = Date.now();
+    for (const { slot } of funPlayers(session)) {
+      const p = fun.players[slot];
+      if (!p) continue;
+      const ent = a.ent(slot);
+      const client = a.client(slot);
+      if (!client) continue;
+      if (p.god || p.demigod || p.notarget) {
+        if (p.god) setBit(engine, ent + f.ent.flags, f.entFlags.god, true);
+        if (p.demigod) setBit(engine, ent + f.ent.flags, f.entFlags.demigod, true);
+        if (p.notarget) setBit(engine, ent + f.ent.flags, f.entFlags.notarget, true);
+      }
+      if (p.noclip) setBit(engine, client + f.client.flags, f.clientFlags.noclip, true);
+      if (p.ufo) setBit(engine, client + f.client.flags, f.clientFlags.ufo, true);
+      if (p.speed !== 1) new Float32Array(engine.buffer)[client + f.client.speedScale >> 2] = p.speed;
+    }
+    if (fun.infiniteStock && now - fun.lastStockAt > 500) {
+      fun.lastStockAt = now;
+      refillStock(session, a);
+    }
+    if ((fun.oneHit || fun.passive || fun.guarding) && now - fun.lastZombiesAt > 1500) {
+      fun.lastZombiesAt = now;
+      if (!fun.queue.length) {
+        if (fun.oneHit) fun.queue.push("ai axis health 1");
+        if (fun.passive || fun.guarding) fun.queue.push("ai axis ignoreall 1");
+      }
+    }
+    flushQueue(session);
+  }
+  function guardPlayers(session, on) {
+    const fun = session.fun;
+    const a = addresses(session);
+    if (!a) return;
+    if (on) {
+      if (!fun.guarding) {
+        fun.guarding = true;
+        if (!fun.passive) fun.queue.push("ai axis ignoreall 1");
+        session.note("guarding the players while someone connects");
+      }
+      for (const { slot } of funPlayers(session)) {
+        const ent = a.ent(slot);
+        if (!a.client(slot)) continue;
+        setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.god, true);
+        setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.notarget, true);
+      }
+    } else if (fun.guarding) {
+      fun.guarding = false;
+      for (const { slot } of funPlayers(session)) {
+        const p = fun.players[slot];
+        const ent = a.ent(slot);
+        if (!a.client(slot)) continue;
+        if (!p?.god) setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.god, false);
+        if (!p?.notarget) setBit(a.engine, ent + a.f.ent.flags, a.f.entFlags.notarget, false);
+      }
+      if (!fun.passive) fun.queue.push("ai axis ignoreall 0");
+      session.note("guard off: everyone is in");
+    }
+  }
+  function flushQueue(session) {
+    const fun = session.fun;
+    if (!fun.queue.length || !session.engine) return;
+    if (session.engine.command(fun.queue[0])) fun.queue.shift();
+  }
+  function refillStock(session, a, slots = funPlayers(session).map((p) => p.slot)) {
+    const { f, engine } = a;
+    for (const slot of slots) {
+      const client = a.client(slot);
+      if (!client) continue;
+      for (let i = 0; i < f.client.ammoSlots; i += 1) {
+        const pool = client + f.client.ammoPools + 8 * i;
+        if (engine.int(pool) && engine.int(pool + 4) < STOCK) engine.setInt(pool + 4, STOCK);
+      }
+    }
+  }
+  function watchConsole(session) {
+    for (const level of ["log", "warn", "error"]) {
+      const original = console[level];
+      console[level] = function(...args) {
+        const text = typeof args[0] === "string" ? args[0] : "";
+        const missing = text.match(/Could not load weapon "([^"]+)"/);
+        if (missing && session.fun?.pendingWeapon === missing[1]) {
+          const label = WEAPONS.find(([w]) => w === missing[1])?.[1] ?? missing[1];
+          say(session.fun, F.weaponMissing(label));
+          session.fun.pendingWeapon = null;
+        }
+        return original.apply(this, args);
+      };
+    }
+  }
+  function step(list, value, direction) {
+    const i = list.indexOf(value);
+    const at = i < 0 ? list.indexOf(list.reduce((best, v) => Math.abs(v - value) < Math.abs(best - value) ? v : best, list[0])) : i;
+    return list[Math.max(0, Math.min(list.length - 1, at + direction))];
+  }
+  function funActions(session) {
+    const fun = session.fun;
+    const engineReady = () => Boolean(addresses(session));
+    const togglePlayer = (key, slot) => {
+      const a = addresses(session);
+      const p = playerState(fun, slot);
+      p[key] = !p[key];
+      if (!p[key] && a) {
+        const client = a.client(slot);
+        if (key === "noclip" || key === "ufo") {
+          if (client) setBit(a.engine, client + a.f.client.flags, a.f.clientFlags[key], false);
+        } else {
+          setBit(a.engine, a.ent(slot) + a.f.ent.flags, a.f.entFlags[key], false);
+        }
+      }
+    };
+    const setSpeed = (slot, value) => {
+      const a = addresses(session);
+      playerState(fun, slot).speed = value;
+      const client = a?.client(slot);
+      if (client) new Float32Array(a.engine.buffer)[client + a.f.client.speedScale >> 2] = value;
+    };
+    const addPoints = (slot, amount) => {
+      const a = addresses(session);
+      const client = a?.client(slot);
+      if (!client) return;
+      const score = client + a.f.client.score;
+      a.engine.setInt(score, amount === "max" ? 9999990 : amount === "zero" ? 0 : Math.min(9999990, a.engine.int(score) + amount));
+    };
+    const parse = (arg) => {
+      const [what, slot] = String(arg).split(":");
+      return { what, slot: slot === "all" ? "all" : Number(slot) };
+    };
+    const forSlots = (slot) => slot === "all" ? funPlayers(session).map((p) => p.slot) : [slot];
+    return {
+      fun: () => fun.open = !fun.open,
+      funToggle: (arg) => {
+        if (!engineReady()) return;
+        const { what, slot } = parse(arg);
+        if (slot === "all") {
+          const slots = forSlots("all");
+          const turnOn = !slots.every((s) => playerState(fun, s)[what]);
+          for (const s of slots) if (playerState(fun, s)[what] !== turnOn) togglePlayer(what, s);
+        } else {
+          togglePlayer(what, slot);
+        }
+      },
+      funSpeed: (arg) => {
+        if (!engineReady()) return;
+        const { what, slot } = parse(arg);
+        for (const s of forSlots(slot)) setSpeed(s, step(SPEEDS, playerState(fun, s).speed, what === "up" ? 1 : -1));
+      },
+      funPoints: (arg) => {
+        if (!engineReady()) return;
+        const { what, slot } = parse(arg);
+        const amount = what === "max" || what === "zero" ? what : Number(what);
+        for (const s of forSlots(slot)) addPoints(s, amount);
+      },
+      funAmmo: (arg) => {
+        if (!engineReady()) return;
+        if (arg === "clip") {
+          fun.infiniteClip = !fun.infiniteClip;
+          fun.queue.push(`set player_sustainAmmo ${fun.infiniteClip ? 1 : 0}`);
+        } else if (arg === "stock") {
+          fun.infiniteStock = !fun.infiniteStock;
+        } else if (arg === "refill") {
+          refillStock(session, addresses(session));
+        }
+      },
+      funZombies: (arg) => {
+        if (!engineReady()) return;
+        if (arg === "onehit") fun.oneHit = !fun.oneHit;
+        else if (arg === "passive") {
+          fun.passive = !fun.passive;
+          if (!fun.passive) fun.queue.push("ai axis ignoreall 0");
+        } else if (arg === "clear") fun.queue.push("ai axis delete");
+        if (fun.oneHit && arg === "onehit") fun.queue.push("ai axis health 1");
+        if (fun.passive && arg === "passive") fun.queue.push("ai axis ignoreall 1");
+      },
+      funWorld: (arg) => {
+        if (!engineReady()) return;
+        const [what, dir] = String(arg).split(":");
+        const direction = dir === "up" ? 1 : -1;
+        if (what === "timescale") {
+          fun.timescale = step(TIMESCALES, fun.timescale, direction);
+          fun.queue.push(`timescale ${fun.timescale}`);
+        } else if (what === "jump") {
+          fun.jump = step(JUMPS, fun.jump, direction);
+          fun.queue.push(`jump_height ${fun.jump}`);
+        } else if (what === "gravity") {
+          fun.gravity = step(GRAVITIES, fun.gravity, direction);
+          fun.queue.push(`bg_gravity ${fun.gravity}`);
+        }
+      },
+      funWeapon: (weapon) => {
+        if (!engineReady()) return;
+        fun.pendingWeapon = weapon;
+        fun.queue.push(`give ${weapon}`);
+        const label = WEAPONS.find(([w]) => w === weapon)?.[1] ?? weapon;
+        say(fun, F.weaponGiven(label));
+      },
+      funReset: () => {
+        const a = addresses(session);
+        for (const { slot } of funPlayers(session)) {
+          const p = playerState(fun, slot);
+          for (const key of PLAYER_TOGGLES) if (p[key]) togglePlayer(key, slot);
+          if (p.speed !== 1) setSpeed(slot, 1);
+        }
+        fun.infiniteStock = false;
+        fun.oneHit = false;
+        if (fun.passive) fun.queue.push("ai axis ignoreall 0");
+        fun.passive = false;
+        if (fun.infiniteClip) fun.queue.push("set player_sustainAmmo 0");
+        fun.infiniteClip = false;
+        if (fun.timescale !== 1) fun.queue.push("timescale 1");
+        if (fun.jump !== 39) fun.queue.push("jump_height 39");
+        if (fun.gravity !== 800) fun.queue.push("bg_gravity 800");
+        Object.assign(fun, { timescale: 1, jump: 39, gravity: 800 });
+        if (!a) fun.queue.length = 0;
+      }
+    };
+  }
+  var fmt = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0$/, "");
+  function funSection(session) {
+    const fun = session.fun;
+    const blocks = [];
+    if (!fun.open) return { kind: "section", title: F.title, act: "fun", open: false, blocks };
+    const a = addresses(session);
+    if (!a || !["ready", "playing"].includes(screen())) {
+      blocks.push({ kind: "text", cls: "muted small", text: F.notLoaded });
+      return { kind: "section", title: F.title, act: "fun", open: fun.open, blocks };
+    }
+    const cheats = (() => {
+      const dvar = a.engine.int(a.f.cheatsDvar);
+      return dvar ? a.engine.byte(dvar + 24) === 1 : true;
+    })();
+    blocks.push({ kind: "text", cls: "muted small", text: `${F.note} ${F.pause}` });
+    if (!cheats) blocks.push({ kind: "callout", tone: "wait", text: F.cheatsOff });
+    if (fun.notice) blocks.push({ kind: "callout", tone: "info", text: fun.notice });
+    const players = funPlayers(session);
+    blocks.push({ kind: "label", text: F.players });
+    const rows = players.length > 1 ? [...players, { slot: "all", n: 0, name: F.all }] : players;
+    for (const p of rows) {
+      const state = p.slot === "all" ? null : playerState(fun, p.slot);
+      const allOn = (key) => players.every((q) => playerState(fun, q.slot)[key]);
+      const on = (key) => state ? state[key] : allOn(key);
+      const speed = state ? state.speed : players.every((q) => playerState(fun, q.slot).speed === playerState(fun, players[0].slot).speed) ? playerState(fun, players[0].slot).speed : null;
+      const score = state ? a.engine.int((a.client(p.slot) || 0) + a.f.client.score) : null;
+      blocks.push({
+        kind: "funPlayer",
+        n: p.n,
+        name: p.name,
+        chips: PLAYER_TOGGLES.map((key) => ({ act: "funToggle", arg: `${key}:${p.slot}`, label: F[key], on: on(key) })),
+        speed: { label: F.speed, value: speed == null ? "–" : `${fmt(speed)}×`, dec: { act: "funSpeed", arg: `down:${p.slot}` }, inc: { act: "funSpeed", arg: `up:${p.slot}` } },
+        money: {
+          label: F.money,
+          value: score == null ? "" : score.toLocaleString(),
+          buttons: [
+            { act: "funPoints", arg: `5000:${p.slot}`, label: "+5k" },
+            { act: "funPoints", arg: `50000:${p.slot}`, label: "+50k" },
+            { act: "funPoints", arg: `max:${p.slot}`, label: "Max" },
+            { act: "funPoints", arg: `zero:${p.slot}`, label: "0" }
+          ]
+        }
+      });
+    }
+    if (players.some((p) => fun.players[p.slot]?.noclip || fun.players[p.slot]?.ufo)) blocks.push({ kind: "callout", tone: "wait", text: F.flyHint });
+    blocks.push({ kind: "label", text: F.ammo });
+    blocks.push({
+      kind: "chips",
+      chips: [
+        { act: "funAmmo", arg: "clip", label: F.infiniteClip, on: fun.infiniteClip },
+        { act: "funAmmo", arg: "stock", label: F.infiniteStock, on: fun.infiniteStock },
+        { act: "funAmmo", arg: "refill", label: F.refill, on: false, plain: true }
+      ]
+    });
+    blocks.push({ kind: "label", text: F.zombies });
+    blocks.push({
+      kind: "chips",
+      chips: [
+        { act: "funZombies", arg: "onehit", label: F.oneHit, on: fun.oneHit },
+        { act: "funZombies", arg: "passive", label: F.passive, on: fun.passive },
+        { act: "funZombies", arg: "clear", label: F.clear, on: false, plain: true }
+      ]
+    });
+    blocks.push({ kind: "label", text: F.world });
+    blocks.push({ kind: "stepper", label: F.timescale, value: `${fmt(fun.timescale)}×`, dec: { act: "funWorld", arg: "timescale:down" }, inc: { act: "funWorld", arg: "timescale:up" } });
+    blocks.push({ kind: "stepper", label: F.jump, value: String(fun.jump), dec: { act: "funWorld", arg: "jump:down" }, inc: { act: "funWorld", arg: "jump:up" } });
+    blocks.push({ kind: "stepper", label: F.gravity, value: String(fun.gravity), dec: { act: "funWorld", arg: "gravity:down" }, inc: { act: "funWorld", arg: "gravity:up" } });
+    blocks.push({ kind: "label", text: F.weapons, aside: MAP_SLUGS[session.zone ?? currentZone()] ?? "" });
+    blocks.push({ kind: "grid", buttons: WEAPONS.map(([w, label]) => ({ act: "funWeapon", arg: w, label })) });
+    blocks.push({ kind: "buttons", buttons: [{ act: "funReset", label: F.reset, style: "ghost" }] });
+    return { kind: "section", title: F.title, act: "fun", open: fun.open, blocks };
+  }
+
   // src/session/lobby.js
   var roundPing = (rtt) => Number.isFinite(rtt) ? Math.round(rtt) : null;
   var LEFT_VISIBLE_MS = 6e4;
@@ -2031,6 +2535,7 @@
   var MAX_KICKS = 4;
   var FIXED_CAMERA = 1024;
   var POS_EVERY_MS = 100;
+  var DROP_HOLD_MAX_MS = 3e5;
   function prepareHost(session, Module, args) {
     const engine = new EngineMemory(Module, session.build);
     if (!engine.mailboxesIdle()) throw new Error("unexpectedMemory");
@@ -2088,7 +2593,8 @@
       session.note("released the start screen so players can connect");
     }
     coopWait(session, screen2 === "playing" ? 0 : 1);
-    syncPause(session, present, active, phase, screen2);
+    trackDropped(session, all, active, phase, screen2, now);
+    syncPause(session, present, active, phase, screen2, now);
     broadcastLobby(session);
     const view2 = latestView();
     if (present.some(active) && view2 && view2.ms !== session.sentViewMs && now - (session.sentPosAt ?? 0) >= POS_EVERY_MS && !(view2.flags & FIXED_CAMERA)) {
@@ -2127,29 +2633,57 @@
     g.sent[kind] = { key, at: now };
     send(session, message);
   }
-  function syncPause(session, present, active, phase, screen2) {
+  function trackDropped(session, all, active, phase, screen2, now) {
+    session.dropped ??= /* @__PURE__ */ new Map();
+    for (const g of all) {
+      const inGame = g.present && active(g);
+      if (inGame && screen2 === "playing") g.wasInGame = true;
+      else if (!inGame && g.wasInGame) {
+        g.wasInGame = false;
+        if (screen2 === "playing" && !session.dropped.has(g.seat)) {
+          session.dropped.set(g.seat, { since: now, name: cleanName(g.state?.name) || null });
+          session.note(`player ${g.seat + 1} fell out of the game: holding everyone`);
+        }
+      }
+      if (inGame && phase(g) === "connected" && session.dropped.delete(g.seat)) session.note(`player ${g.seat + 1} is back`);
+    }
+    for (const [seat, d] of session.dropped) {
+      if (now - d.since > DROP_HOLD_MAX_MS || screen2 !== "playing") {
+        session.dropped.delete(seat);
+        session.note(`stopped waiting for player ${seat + 1}`);
+      }
+    }
+  }
+  function syncPause(session, present, active, phase, screen2, now) {
     const engine = session.engine;
     const menuOpen = Boolean(engine?.menuOpen()) && screen2 === "playing";
     session.menuOpen = menuOpen;
-    const linked = present.filter((g) => active(g) && phase(g) === "connected");
+    const linked = present.filter((g) => active(g));
     const connecting = present.some((g) => !active(g) && CONNECTING.includes(phase(g)));
-    if (engine) applyHostPause(session, linked.length > 0 && !connecting && (menuOpen || linked.some((g) => g.pause)), menuOpen);
+    const dropHold = session.dropped?.size > 0;
+    const guestPause = linked.find((g) => g.pause);
+    const wanted = !connecting && (linked.length > 0 && (menuOpen || Boolean(guestPause)) || dropHold);
+    if (engine) {
+      applyHostPause(session, wanted, menuOpen);
+      guardPlayers(session, screen2 === "playing" && connecting);
+    }
     if (engine && !session.paused && present.some((g) => !active(g))) {
       if (engine.dvar("clPaused")) engine.setDvar("clPaused", 0);
       if (engine.dvar("svPaused")) engine.setDvar("svPaused", 0);
     }
+    const dropped = dropHold ? [...session.dropped.values()] : [];
     for (const g of present) {
-      const on = menuOpen || linked.some((other) => other !== g && other.pause);
-      if (on !== g.sentPause) {
-        g.sentPause = on;
-        send(session, { t: "pause", on, to: g.seat });
-      }
+      const other = linked.find((o) => o !== g && o.pause);
+      const on = !connecting && (menuOpen || dropHold || Boolean(other));
+      const why = !on ? void 0 : dropHold ? "dropped" : menuOpen ? "host" : "player";
+      const who = why === "dropped" ? dropped.map((d) => d.name).filter(Boolean) : why === "player" ? [cleanName(other.state?.name)].filter(Boolean) : [];
+      sendWhenChanged(session, g, "pause", { t: "pause", on, to: g.seat, why, who }, now);
     }
   }
   function applyHostPause(session, paused, menuOpen) {
     const engine = session.engine;
     if (paused) {
-      if (!session.paused) session.note(menuOpen ? "paused" : "paused by a guest");
+      if (!session.paused) session.note(menuOpen ? "paused" : session.dropped?.size ? "paused: a player fell out" : "paused by a guest");
       engine.holdServer(true);
       if (!engine.dvar("svPaused")) engine.setDvar("svPaused", 1);
       if (!engine.dvar("clPaused")) engine.setDvar("clPaused", 1);
@@ -2656,462 +3190,6 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
     }
   };
 
-  // src/fun/fun.js
-  var TEXT = {
-    en: {
-      title: "Fun mode",
-      note: "Host only. Changes apply to everyone in your game.",
-      pause: "Tip: press Esc in game to open this card.",
-      flyHint: "Fly and Noclip go through walls: switch them off standing on the floor, or you fall out of the map.",
-      players: "Players",
-      all: "Everyone",
-      god: "God",
-      demigod: "Can't die",
-      notarget: "Invisible",
-      noclip: "Noclip",
-      ufo: "Fly",
-      speed: "Speed",
-      money: "Points",
-      ammo: "Ammo",
-      infiniteClip: "Infinite clip",
-      infiniteStock: "Infinite reserve",
-      refill: "Refill everyone",
-      zombies: "Zombies",
-      oneHit: "Die in one hit",
-      passive: "Ignore players",
-      clear: "Clear zombies",
-      world: "World",
-      timescale: "Game speed",
-      jump: "Jump height",
-      gravity: "Gravity",
-      weapons: "Weapons (for you)",
-      weaponMissing: (w) => `${w} is not on this map.`,
-      weaponGiven: (w) => `${w} given.`,
-      reset: "Reset everything",
-      notLoaded: "Start a map to use this.",
-      cheatsOff: "This map has cheats off: the commands won't work."
-    },
-    es: {
-      title: "Modo diversión",
-      note: "Solo el anfitrión. Se aplica a todos en tu partida.",
-      pause: "Consejo: pulsa Esc en el juego para abrir esta tarjeta.",
-      flyHint: "Volar y Atravesar pasan por las paredes: apágalos con los pies en el suelo o el jugador cae fuera del mapa.",
-      players: "Jugadores",
-      all: "Todos",
-      god: "Inmortal",
-      demigod: "No muere",
-      notarget: "Invisible",
-      noclip: "Atravesar",
-      ufo: "Volar",
-      speed: "Velocidad",
-      money: "Puntos",
-      ammo: "Munición",
-      infiniteClip: "Cargador infinito",
-      infiniteStock: "Reserva infinita",
-      refill: "Rellenar a todos",
-      zombies: "Zombies",
-      oneHit: "Mueren de un golpe",
-      passive: "Os ignoran",
-      clear: "Limpiar zombies",
-      world: "Mundo",
-      timescale: "Velocidad del juego",
-      jump: "Altura del salto",
-      gravity: "Gravedad",
-      weapons: "Armas (para ti)",
-      weaponMissing: (w) => `${w} no está en este mapa.`,
-      weaponGiven: (w) => `${w} entregada.`,
-      reset: "Restablecer todo",
-      notLoaded: "Abre un mapa para usarlo.",
-      cheatsOff: "Este mapa tiene los trucos desactivados: los comandos no funcionarán."
-    },
-    pt: {
-      title: "Modo diversão",
-      note: "Só o host. Vale para todo mundo na sua partida.",
-      pause: "Dica: aperte Esc no jogo para abrir este cartão.",
-      flyHint: "Voa e Atravessa passam por paredes: desligue com os pés no chão, senão o jogador cai para fora do mapa.",
-      players: "Jogadores",
-      all: "Todos",
-      god: "Imortal",
-      demigod: "Não morre",
-      notarget: "Invisível",
-      noclip: "Atravessa",
-      ufo: "Voa",
-      speed: "Velocidade",
-      money: "Pontos",
-      ammo: "Munição",
-      infiniteClip: "Pente infinito",
-      infiniteStock: "Reserva infinita",
-      refill: "Encher a de todos",
-      zombies: "Zumbis",
-      oneHit: "Morrem com 1 tiro",
-      passive: "Ignoram vocês",
-      clear: "Limpar zumbis",
-      world: "Mundo",
-      timescale: "Velocidade do jogo",
-      jump: "Altura do pulo",
-      gravity: "Gravidade",
-      weapons: "Armas (para você)",
-      weaponMissing: (w) => `${w} não existe neste mapa.`,
-      weaponGiven: (w) => `${w} entregue.`,
-      reset: "Resetar tudo",
-      notLoaded: "Abra um mapa para usar.",
-      cheatsOff: "Este mapa está com cheats desligados: os comandos não vão funcionar."
-    }
-  };
-  var F = TEXT[LANG];
-  var YOU = { en: "You", es: "Tú", pt: "Você" };
-  var PLAYER = { en: "Player", es: "Jugador", pt: "Jogador" };
-  var PLAYER_TOGGLES = ["god", "demigod", "notarget", "noclip", "ufo"];
-  var SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
-  var TIMESCALES = [0.25, 0.5, 0.75, 1, 1.5, 2];
-  var JUMPS = [39, 80, 150, 300, 600];
-  var GRAVITIES = [800, 600, 400, 200, 100];
-  var STOCK = 999;
-  var WEAPONS = [
-    ["ray_gun_zm", "Ray Gun"],
-    ["ray_gun_upgraded_zm", "Ray Gun (PaP)"],
-    ["thundergun_zm", "Thundergun"],
-    ["thundergun_upgraded_zm", "Thundergun (PaP)"],
-    ["tesla_gun_zm", "Wunderwaffe"],
-    ["freezegun_zm", "Winter's Howl"],
-    ["microwavegun_zm", "Wave Gun"],
-    ["sniper_explosive_zm", "Scavenger"],
-    ["crossbow_explosive_zm", "Crossbow"],
-    ["knife_ballistic_zm", "Ballistic Knife"],
-    ["hk21_zm", "HK21"],
-    ["rpk_zm", "RPK"],
-    ["galil_zm", "Galil"],
-    ["commando_zm", "Commando"],
-    ["famas_zm", "FAMAS"],
-    ["aug_acog_zm", "AUG"],
-    ["spas_zm", "SPAS-12"],
-    ["china_lake_zm", "China Lake"],
-    ["python_zm", "Python"],
-    ["cz75dw_zm", "CZ75 Dual"],
-    ["zombie_cymbal_monkey", "Monkey Bomb"],
-    ["zombie_black_hole_bomb", "Gersh Device"],
-    ["bowie_knife_zm", "Bowie Knife"],
-    ["claymore_zm", "Claymores"]
-  ];
-  function createFun() {
-    return {
-      open: false,
-      players: {},
-      // slot -> { god, demigod, notarget, noclip, ufo, speed }
-      infiniteClip: false,
-      infiniteStock: false,
-      oneHit: false,
-      passive: false,
-      timescale: 1,
-      jump: 39,
-      gravity: 800,
-      queue: [],
-      // console commands waiting for the engine's mailbox
-      notice: null,
-      noticeAt: 0,
-      lastStockAt: 0,
-      lastZombiesAt: 0
-    };
-  }
-  var playerState = (fun, slot) => fun.players[slot] ??= { god: false, demigod: false, notarget: false, noclip: false, ufo: false, speed: 1 };
-  function funPlayers(session) {
-    const players = [{ slot: 0, n: 1, name: session.name || YOU[LANG] }];
-    if (session.mode === "host") {
-      for (const g of session.guests.values()) {
-        if (g.present && g.slot?.state === SLOT.active) players.push({ slot: g.slot.slot, n: g.seat + 1, name: g.state?.name || `${PLAYER[LANG]} ${g.seat + 1}` });
-      }
-    }
-    return players;
-  }
-  var funAvailable = (session) => session.mode !== "guest";
-  function addresses(session) {
-    const f = session.build?.fun;
-    const engine = session.engine;
-    if (!f || !engine) return null;
-    return {
-      f,
-      engine,
-      ent: (slot) => f.entities + slot * f.entitySize,
-      client: (slot) => engine.int(f.entities + slot * f.entitySize + f.ent.client)
-    };
-  }
-  function setBit(engine, address, bit, on) {
-    if (on) Atomics.or(engine.i32, address >> 2, bit);
-    else Atomics.and(engine.i32, address >> 2, ~bit);
-  }
-  function say(fun, text) {
-    fun.notice = text;
-    fun.noticeAt = Date.now();
-  }
-  function funTick(session) {
-    const fun = session.fun;
-    if (fun.notice && Date.now() - fun.noticeAt > 6e3) fun.notice = null;
-    const a = addresses(session);
-    if (!a || !funAvailable(session) || screen() !== "playing") {
-      flushQueue(session);
-      return;
-    }
-    const { f, engine } = a;
-    const now = Date.now();
-    for (const { slot } of funPlayers(session)) {
-      const p = fun.players[slot];
-      if (!p) continue;
-      const ent = a.ent(slot);
-      const client = a.client(slot);
-      if (!client) continue;
-      if (p.god || p.demigod || p.notarget) {
-        if (p.god) setBit(engine, ent + f.ent.flags, f.entFlags.god, true);
-        if (p.demigod) setBit(engine, ent + f.ent.flags, f.entFlags.demigod, true);
-        if (p.notarget) setBit(engine, ent + f.ent.flags, f.entFlags.notarget, true);
-      }
-      if (p.noclip) setBit(engine, client + f.client.flags, f.clientFlags.noclip, true);
-      if (p.ufo) setBit(engine, client + f.client.flags, f.clientFlags.ufo, true);
-      if (p.speed !== 1) new Float32Array(engine.buffer)[client + f.client.speedScale >> 2] = p.speed;
-    }
-    if (fun.infiniteStock && now - fun.lastStockAt > 500) {
-      fun.lastStockAt = now;
-      refillStock(session, a);
-    }
-    if ((fun.oneHit || fun.passive) && now - fun.lastZombiesAt > 1500) {
-      fun.lastZombiesAt = now;
-      if (!fun.queue.length) {
-        if (fun.oneHit) fun.queue.push("ai axis health 1");
-        if (fun.passive) fun.queue.push("ai axis ignoreall 1");
-      }
-    }
-    flushQueue(session);
-  }
-  function flushQueue(session) {
-    const fun = session.fun;
-    if (!fun.queue.length || !session.engine) return;
-    if (session.engine.command(fun.queue[0])) fun.queue.shift();
-  }
-  function refillStock(session, a, slots = funPlayers(session).map((p) => p.slot)) {
-    const { f, engine } = a;
-    for (const slot of slots) {
-      const client = a.client(slot);
-      if (!client) continue;
-      for (let i = 0; i < f.client.ammoSlots; i += 1) {
-        const pool = client + f.client.ammoPools + 8 * i;
-        if (engine.int(pool) && engine.int(pool + 4) < STOCK) engine.setInt(pool + 4, STOCK);
-      }
-    }
-  }
-  function watchConsole(session) {
-    for (const level of ["log", "warn", "error"]) {
-      const original = console[level];
-      console[level] = function(...args) {
-        const text = typeof args[0] === "string" ? args[0] : "";
-        const missing = text.match(/Could not load weapon "([^"]+)"/);
-        if (missing && session.fun?.pendingWeapon === missing[1]) {
-          const label = WEAPONS.find(([w]) => w === missing[1])?.[1] ?? missing[1];
-          say(session.fun, F.weaponMissing(label));
-          session.fun.pendingWeapon = null;
-        }
-        return original.apply(this, args);
-      };
-    }
-  }
-  function step(list, value, direction) {
-    const i = list.indexOf(value);
-    const at = i < 0 ? list.indexOf(list.reduce((best, v) => Math.abs(v - value) < Math.abs(best - value) ? v : best, list[0])) : i;
-    return list[Math.max(0, Math.min(list.length - 1, at + direction))];
-  }
-  function funActions(session) {
-    const fun = session.fun;
-    const engineReady = () => Boolean(addresses(session));
-    const togglePlayer = (key, slot) => {
-      const a = addresses(session);
-      const p = playerState(fun, slot);
-      p[key] = !p[key];
-      if (!p[key] && a) {
-        const client = a.client(slot);
-        if (key === "noclip" || key === "ufo") {
-          if (client) setBit(a.engine, client + a.f.client.flags, a.f.clientFlags[key], false);
-        } else {
-          setBit(a.engine, a.ent(slot) + a.f.ent.flags, a.f.entFlags[key], false);
-        }
-      }
-    };
-    const setSpeed = (slot, value) => {
-      const a = addresses(session);
-      playerState(fun, slot).speed = value;
-      const client = a?.client(slot);
-      if (client) new Float32Array(a.engine.buffer)[client + a.f.client.speedScale >> 2] = value;
-    };
-    const addPoints = (slot, amount) => {
-      const a = addresses(session);
-      const client = a?.client(slot);
-      if (!client) return;
-      const score = client + a.f.client.score;
-      a.engine.setInt(score, amount === "max" ? 9999990 : amount === "zero" ? 0 : Math.min(9999990, a.engine.int(score) + amount));
-    };
-    const parse = (arg) => {
-      const [what, slot] = String(arg).split(":");
-      return { what, slot: slot === "all" ? "all" : Number(slot) };
-    };
-    const forSlots = (slot) => slot === "all" ? funPlayers(session).map((p) => p.slot) : [slot];
-    return {
-      fun: () => fun.open = !fun.open,
-      funToggle: (arg) => {
-        if (!engineReady()) return;
-        const { what, slot } = parse(arg);
-        if (slot === "all") {
-          const slots = forSlots("all");
-          const turnOn = !slots.every((s) => playerState(fun, s)[what]);
-          for (const s of slots) if (playerState(fun, s)[what] !== turnOn) togglePlayer(what, s);
-        } else {
-          togglePlayer(what, slot);
-        }
-      },
-      funSpeed: (arg) => {
-        if (!engineReady()) return;
-        const { what, slot } = parse(arg);
-        for (const s of forSlots(slot)) setSpeed(s, step(SPEEDS, playerState(fun, s).speed, what === "up" ? 1 : -1));
-      },
-      funPoints: (arg) => {
-        if (!engineReady()) return;
-        const { what, slot } = parse(arg);
-        const amount = what === "max" || what === "zero" ? what : Number(what);
-        for (const s of forSlots(slot)) addPoints(s, amount);
-      },
-      funAmmo: (arg) => {
-        if (!engineReady()) return;
-        if (arg === "clip") {
-          fun.infiniteClip = !fun.infiniteClip;
-          fun.queue.push(`set player_sustainAmmo ${fun.infiniteClip ? 1 : 0}`);
-        } else if (arg === "stock") {
-          fun.infiniteStock = !fun.infiniteStock;
-        } else if (arg === "refill") {
-          refillStock(session, addresses(session));
-        }
-      },
-      funZombies: (arg) => {
-        if (!engineReady()) return;
-        if (arg === "onehit") fun.oneHit = !fun.oneHit;
-        else if (arg === "passive") {
-          fun.passive = !fun.passive;
-          if (!fun.passive) fun.queue.push("ai axis ignoreall 0");
-        } else if (arg === "clear") fun.queue.push("ai axis delete");
-        if (fun.oneHit && arg === "onehit") fun.queue.push("ai axis health 1");
-        if (fun.passive && arg === "passive") fun.queue.push("ai axis ignoreall 1");
-      },
-      funWorld: (arg) => {
-        if (!engineReady()) return;
-        const [what, dir] = String(arg).split(":");
-        const direction = dir === "up" ? 1 : -1;
-        if (what === "timescale") {
-          fun.timescale = step(TIMESCALES, fun.timescale, direction);
-          fun.queue.push(`timescale ${fun.timescale}`);
-        } else if (what === "jump") {
-          fun.jump = step(JUMPS, fun.jump, direction);
-          fun.queue.push(`jump_height ${fun.jump}`);
-        } else if (what === "gravity") {
-          fun.gravity = step(GRAVITIES, fun.gravity, direction);
-          fun.queue.push(`bg_gravity ${fun.gravity}`);
-        }
-      },
-      funWeapon: (weapon) => {
-        if (!engineReady()) return;
-        fun.pendingWeapon = weapon;
-        fun.queue.push(`give ${weapon}`);
-        const label = WEAPONS.find(([w]) => w === weapon)?.[1] ?? weapon;
-        say(fun, F.weaponGiven(label));
-      },
-      funReset: () => {
-        const a = addresses(session);
-        for (const { slot } of funPlayers(session)) {
-          const p = playerState(fun, slot);
-          for (const key of PLAYER_TOGGLES) if (p[key]) togglePlayer(key, slot);
-          if (p.speed !== 1) setSpeed(slot, 1);
-        }
-        fun.infiniteStock = false;
-        fun.oneHit = false;
-        if (fun.passive) fun.queue.push("ai axis ignoreall 0");
-        fun.passive = false;
-        if (fun.infiniteClip) fun.queue.push("set player_sustainAmmo 0");
-        fun.infiniteClip = false;
-        if (fun.timescale !== 1) fun.queue.push("timescale 1");
-        if (fun.jump !== 39) fun.queue.push("jump_height 39");
-        if (fun.gravity !== 800) fun.queue.push("bg_gravity 800");
-        Object.assign(fun, { timescale: 1, jump: 39, gravity: 800 });
-        if (!a) fun.queue.length = 0;
-      }
-    };
-  }
-  var fmt = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0$/, "");
-  function funSection(session) {
-    const fun = session.fun;
-    const blocks = [];
-    if (!fun.open) return { kind: "section", title: F.title, act: "fun", open: false, blocks };
-    const a = addresses(session);
-    if (!a || !["ready", "playing"].includes(screen())) {
-      blocks.push({ kind: "text", cls: "muted small", text: F.notLoaded });
-      return { kind: "section", title: F.title, act: "fun", open: fun.open, blocks };
-    }
-    const cheats = (() => {
-      const dvar = a.engine.int(a.f.cheatsDvar);
-      return dvar ? a.engine.byte(dvar + 24) === 1 : true;
-    })();
-    blocks.push({ kind: "text", cls: "muted small", text: `${F.note} ${F.pause}` });
-    if (!cheats) blocks.push({ kind: "callout", tone: "wait", text: F.cheatsOff });
-    if (fun.notice) blocks.push({ kind: "callout", tone: "info", text: fun.notice });
-    const players = funPlayers(session);
-    blocks.push({ kind: "label", text: F.players });
-    const rows = players.length > 1 ? [...players, { slot: "all", n: 0, name: F.all }] : players;
-    for (const p of rows) {
-      const state = p.slot === "all" ? null : playerState(fun, p.slot);
-      const allOn = (key) => players.every((q) => playerState(fun, q.slot)[key]);
-      const on = (key) => state ? state[key] : allOn(key);
-      const speed = state ? state.speed : players.every((q) => playerState(fun, q.slot).speed === playerState(fun, players[0].slot).speed) ? playerState(fun, players[0].slot).speed : null;
-      const score = state ? a.engine.int((a.client(p.slot) || 0) + a.f.client.score) : null;
-      blocks.push({
-        kind: "funPlayer",
-        n: p.n,
-        name: p.name,
-        chips: PLAYER_TOGGLES.map((key) => ({ act: "funToggle", arg: `${key}:${p.slot}`, label: F[key], on: on(key) })),
-        speed: { label: F.speed, value: speed == null ? "–" : `${fmt(speed)}×`, dec: { act: "funSpeed", arg: `down:${p.slot}` }, inc: { act: "funSpeed", arg: `up:${p.slot}` } },
-        money: {
-          label: F.money,
-          value: score == null ? "" : score.toLocaleString(),
-          buttons: [
-            { act: "funPoints", arg: `5000:${p.slot}`, label: "+5k" },
-            { act: "funPoints", arg: `50000:${p.slot}`, label: "+50k" },
-            { act: "funPoints", arg: `max:${p.slot}`, label: "Max" },
-            { act: "funPoints", arg: `zero:${p.slot}`, label: "0" }
-          ]
-        }
-      });
-    }
-    if (players.some((p) => fun.players[p.slot]?.noclip || fun.players[p.slot]?.ufo)) blocks.push({ kind: "callout", tone: "wait", text: F.flyHint });
-    blocks.push({ kind: "label", text: F.ammo });
-    blocks.push({
-      kind: "chips",
-      chips: [
-        { act: "funAmmo", arg: "clip", label: F.infiniteClip, on: fun.infiniteClip },
-        { act: "funAmmo", arg: "stock", label: F.infiniteStock, on: fun.infiniteStock },
-        { act: "funAmmo", arg: "refill", label: F.refill, on: false, plain: true }
-      ]
-    });
-    blocks.push({ kind: "label", text: F.zombies });
-    blocks.push({
-      kind: "chips",
-      chips: [
-        { act: "funZombies", arg: "onehit", label: F.oneHit, on: fun.oneHit },
-        { act: "funZombies", arg: "passive", label: F.passive, on: fun.passive },
-        { act: "funZombies", arg: "clear", label: F.clear, on: false, plain: true }
-      ]
-    });
-    blocks.push({ kind: "label", text: F.world });
-    blocks.push({ kind: "stepper", label: F.timescale, value: `${fmt(fun.timescale)}×`, dec: { act: "funWorld", arg: "timescale:down" }, inc: { act: "funWorld", arg: "timescale:up" } });
-    blocks.push({ kind: "stepper", label: F.jump, value: String(fun.jump), dec: { act: "funWorld", arg: "jump:down" }, inc: { act: "funWorld", arg: "jump:up" } });
-    blocks.push({ kind: "stepper", label: F.gravity, value: String(fun.gravity), dec: { act: "funWorld", arg: "gravity:down" }, inc: { act: "funWorld", arg: "gravity:up" } });
-    blocks.push({ kind: "label", text: F.weapons, aside: MAP_SLUGS[session.zone ?? currentZone()] ?? "" });
-    blocks.push({ kind: "grid", buttons: WEAPONS.map(([w, label]) => ({ act: "funWeapon", arg: w, label })) });
-    blocks.push({ kind: "buttons", buttons: [{ act: "funReset", label: F.reset, style: "ghost" }] });
-    return { kind: "section", title: F.title, act: "fun", open: fun.open, blocks };
-  }
-
   // src/ui/view.js
   var COPIED_MS = 2e3;
   var CONNECTED = ["ingame", "ready", "lobby"];
@@ -3179,7 +3257,11 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
     else if (session.gate) blocks.push({ kind: "callout", tone: "wait", text: T.gate, buttons: [{ act: "startNow", label: T.startNow }] });
     else if (screen2 === "ready" && !onTheWay && roster.some((p) => !p.host && p.status === "ready")) blocks.push({ kind: "callout", tone: "ok", text: T.allIn });
     else if (onTheWay && screen2 === "playing") blocks.push({ kind: "callout", tone: "info", text: T.latecomers });
-    if (session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+    if (session.dropped?.size) {
+      const names = [...session.dropped.values()].map((d) => d.name).filter(Boolean).join(", ");
+      blocks.push({ kind: "callout", tone: "wait", text: T.droppedHold(names), buttons: [{ act: "continueWithout", label: T.continueWithout, style: "primary" }] });
+    } else if (session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+    if (session.fun?.guarding) blocks.push({ kind: "callout", tone: "info", text: T.guarding });
     if (onSharedRelay(session) && screen2 !== "playing") blocks.push({ kind: "callout", tone: "info", text: T.relayPitchHost, buttons: relayButtons() });
     blocks.push(mapBlock(MAP_SLUGS[session.zone ?? currentZone()] ?? null, currentHorde(), T.mapSubHost));
     if (session.error) return { text: T.chip.error, tone: "bad" };
@@ -3207,13 +3289,19 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
       if (text) blocks.push({ kind: "callout", tone: failed ? "bad" : phase === "connected" ? "ok" : "info", text, buttons: failed ? [{ act: "rejoin", label: T.rejoin, style: "primary" }] : [] });
     }
     if (session.joinedLate && ["joining", "connected"].includes(phase)) blocks.push({ kind: "callout", tone: "info", text: T.lateJoin });
-    if (phase === "connected" && session.paused) blocks.push({ kind: "callout", tone: "wait", text: session.menuOpen ? T.pausedYou : T.pausedBy });
+    if (phase === "connected" && session.paused) blocks.push({ kind: "callout", tone: "wait", text: guestPauseText(session) });
     blocks.push(mapBlock(slug, session.lobby?.horde ?? session.hostInfo?.horde, T.mapSubGuest));
     if (session.error) return { text: T.chip.error, tone: "bad" };
     if (failed) return { text: T.chip.ended, tone: "bad" };
     if (session.paused) return { text: T.chip.paused, tone: "wait" };
     if (phase === "connected") return screen2 === "playing" ? { text: T.chip.ingame, tone: "ok live" } : { text: T.chip.lobby, tone: "ok" };
     return { text: T.chip.joining, tone: "wait live" };
+  }
+  function guestPauseText(session) {
+    if (session.menuOpen) return T.pausedYou;
+    const who = (session.remotePauseWho ?? []).map(cleanName).filter(Boolean).join(", ");
+    if (session.remotePauseWhy === "dropped") return T.pausedDropped(who);
+    return who ? T.pausedByName(who) : T.pausedBy;
   }
   function guestMessage(session, phase, mapName, screen2) {
     switch (phase) {
@@ -3440,6 +3528,10 @@ button.act.tiny { padding: 5px 6px; font-size: 11.5px; font-weight: 600; }
         go(location.pathname);
       },
       startNow: () => session.startAlone = true,
+      continueWithout: () => {
+        session.dropped?.clear();
+        session.note("the host goes on without the player who fell out");
+      },
       rejoin: () => location.reload(),
       openUpdate: () => window.open(session.update?.url, "_blank", "noopener"),
       openRelayGuide: () => window.open(`${RELAY_GUIDE.replace("#", LANG_QUERY)}`, "_blank", "noopener"),
